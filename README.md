@@ -1,39 +1,41 @@
-# Khieron - the lightweight kubernetes native SRE agent framework
+# Khieron - the lightweight kubernetes native agent framework
 
-If you find the major agentic frameworks heavy and overengineered for simple agents to manage SRE tasks, you're not alone.
+If you find the major agentic frameworks heavy and overengineered for simple agents to manage small tasks, you're not alone.
 
-That's why we developed Project Khieron (pronounced Kay-ron), to bring kubernetes native operator design together with
-a Go native SDK [adk-go](https://adk.dev), to create a lightweight framework that brings together two simple concepts
-**Skills** (for a flexible and dynamic way of creating single minded single task agents) and **Advisories** (a Human In
-the Loop mechanism in a familiar style).
+## Introducing Project Khieron
 
-## The lightweight advantage
+That's why we developed Project Khieron[<sup>1</sup>](#why-khieron) (pronounced Kay-ron), to bring kubernetes native operator design together with a Go native SDK [adk-go](https://adk.dev), to create a lightweight framework that brings together two simple concepts:
+
+* **Skills** (for a flexible and dynamic way of creating single minded single task agents) and 
+* **Advisories** (a Human In the Loop mechanism in a familiar CRD style)
+
+### The lightweight advantage
 
 Commonly cited agentic frameworks for Kubernetes tend to be general purpose behemoths, capable of doing many external facing tasks, but also bringing with them several external systems that and other projects that seem to have a combinatorial effect in increasing complexity.
 
 If you're trying to acheieve a simple task to manage your cluster, it can feel like using a sledgehammer to crack a nut.
 
-## Simplicity throughout
+### Simplicity throughout
 
 Khieron uses the Agent Development Tookit (Go version) bundled inside the controller, with no Python dependencies (greatly reducing the size of the pod and the startup time), making it suitable for Edge use cases.
 
 There are no child containers to manage. No LiteLLM. No LangChain/LangGrpah.
 
-## Flexibility
+### Flexibility
 
 As a backend model the ADK provides several options for connecting to models such as Gemini or Claude or to self hosted models like Gemma.
 
-## Dynamic configuration
+### Dynamic configuration
 
 The `Skill` CRD is linked to a `ConfigMap` that contains a **Skill.md** file and some `assets`, `scripts` and `references`. Each Skill dynamically creates **one** Agent and runs in a loop doing one task.
 
-## Internal and External Tooling
+### Internal and External Tooling
 
 The Skill CRD contains an `assets` folder to contain bash scripts used as Externally defined tools.
 
 The controller also has some internally defined tools, written in Go, covering many useful gernal puspose tasks on the Kubernetes API. These are available to the Skills to perform tasks.
 
-## Kubernetes Native Human In the Loop
+### Kubernetes Native Human In the Loop
 
 The creation and management of `Advisories` objects (defined as a CRD) gives an easily manageable interface for humans to see, and approve or reject or comment on some anomaly the Agent finds.
 
@@ -43,10 +45,15 @@ The fact that they are CRDs allow them to have their own control loop intercting
 
 To protect from the Agent calling the Model too many times, the agent runs every 5 minutes (configurable). Additionally if the agent finds that a tool is returning a failure that needs attention the Agent will pause the Skill.
 
-## Non goals
+### Non goals
 
 The Project does not intend to be a comprehensive Agentic framework and is not designed to create a
 RAG system.
+
+### Why Khieron
+
+In Greek mythology, [Chiron](https://en.wikipedia.org/wiki/Chiron), also Cheiron or Kheiron or Khieron, (Ancient Greek: Χείρων) was held to be the superlative centaur amongst his brethren since he was called the "wisest and justest of all the centaurs".
+> We're following the [rule](https://en.wikipedia.org/wiki/I_before_E_except_after_C) `i` before `e` except after `c` in our interpretation.
 
 ## Getting Started
 
@@ -61,3 +68,133 @@ kubectl create secret generic google-api-key \
   --from-literal=GOOGLE_API_KEY="$GOOGLE_API_KEY" \
   -n $NAMESPACE
 ```
+
+
+### Prerequisites
+- go version v1.24.0+
+- docker version 17.03+.
+- kubectl version v1.11.3+.
+- Access to a Kubernetes v1.11.3+ cluster.
+
+### To Deploy on the cluster
+**Build and push your image to the location specified by `IMG`:**
+
+```sh
+make docker-build docker-push IMG=<some-registry>/khieron:tag
+```
+
+**NOTE:** This image ought to be published in the personal registry you specified.
+And it is required to have access to pull the image from the working environment.
+Make sure you have the proper permission to the registry if the above commands don’t work.
+
+**Install the CRDs into the cluster:**
+
+```sh
+make install
+```
+
+**Deploy the Manager to the cluster with the image specified by `IMG`:**
+
+```sh
+make deploy IMG=<some-registry>/khieron:tag
+```
+
+> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
+privileges or be logged in as admin.
+
+**Create instances of your solution**
+You can apply the samples (examples) from the config/sample:
+
+```sh
+kubectl apply -k config/samples/
+```
+
+>**NOTE**: Ensure that the samples has default values to test it out.
+
+### To Uninstall
+**Delete the instances (CRs) from the cluster:**
+
+```sh
+kubectl delete -k config/samples/
+```
+
+**Delete the APIs(CRDs) from the cluster:**
+
+```sh
+make uninstall
+```
+
+**UnDeploy the controller from the cluster:**
+
+```sh
+make undeploy
+```
+
+## Project Distribution
+
+Following the options to release and provide this solution to the users.
+
+### By providing a bundle with all YAML files
+
+1. Build the installer for the image built and published in the registry:
+
+```sh
+make build-installer IMG=<some-registry>/khieron:tag
+```
+
+**NOTE:** The makefile target mentioned above generates an 'install.yaml'
+file in the dist directory. This file contains all the resources built
+with Kustomize, which are necessary to install this project without its
+dependencies.
+
+2. Using the installer
+
+Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
+the project, i.e.:
+
+```sh
+kubectl apply -f https://raw.githubusercontent.com/<org>/khieron/<tag or branch>/dist/install.yaml
+```
+
+### By providing a Helm Chart
+
+1. Install [helmify](https://github.com/arttor/helmify) and generate the chart from the kustomize output:
+
+```sh
+go install github.com/arttor/helmify/cmd/helmify@latest
+kustomize build config/default | helmify dist/chart
+```
+
+2. The chart is generated under `dist/chart/`. Users can install it with:
+
+```sh
+helm install khieron dist/chart -n <namespace>
+```
+
+**NOTE:** If you change the project, regenerate the Helm chart
+using the same commands above to sync the latest changes. Review
+any custom values previously added to `dist/chart/values.yaml`
+and reapply them after regeneration.
+
+## Contributing
+// TODO(user): Add detailed information on how you would like others to contribute to this project
+
+**NOTE:** Run `make help` for more information on all potential `make` targets
+
+More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+
+## License
+
+Copyright 2026.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.

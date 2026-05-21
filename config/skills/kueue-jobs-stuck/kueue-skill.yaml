@@ -1,0 +1,10 @@
+apiVersion: intelligence.aipcc-gpuaas.com/v1alpha1
+kind: KueueSkill
+metadata:
+  labels:
+    app.kubernetes.io/name: kueue-jobs-stuck
+    app.kubernetes.io/managed-by: kustomize
+  name: kueue-jobs-stuck
+spec:
+  skillconfigref:
+    name: "kueue-intelligence-kueue-jobs-stuck"

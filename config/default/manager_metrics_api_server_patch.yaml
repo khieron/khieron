@@ -1,0 +1,5 @@
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: METRICS_API_SERVER
+    value: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"

@@ -1,0 +1,6 @@
+{
+    "name": "tool-failed",
+    "advisory": "The Kueue skill {skill name} failed",
+    "explaination": "{explaination}",
+    "proposal": "Suspend the KueueSkill agent until the problem is fixed"
+}

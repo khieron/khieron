@@ -1,2 +1,13 @@
 resources:
 - manager.yaml
+- rh-ee-scondon-pull-secret.yaml
+- rh-ee-scondon-google-api-key-secret.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: quay.io/rh-ee-scondon/kueue-intelligence-bundle
+  newTag: latest
+
+generatorOptions:
+  disableNameSuffixHash: true

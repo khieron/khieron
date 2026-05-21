@@ -1,0 +1,11 @@
+resources:
+  - kueue-skill.yaml
+configMapGenerator:
+- name: kueue-jobs-stuck
+  files:
+  - kueue-jobs-stuck___SKILL.md=SKILL.md
+  - kueue-jobs-stuck___assets___kueue-advisory-tool-failed.json=assets/kueue-advisory-tool-failed.json
+  - kueue-jobs-stuck___assets___kueue-advisory-jobs-stuck.json=assets/kueue-advisory-jobs-stuck.json
+  - kueue-jobs-stuck___scripts___get-jobs-stuck.sh=scripts/get-jobs-stuck.sh
+generatorOptions:
+  disableNameSuffixHash: true

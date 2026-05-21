@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "chart.fullname" . }}-google-api-key
+  labels:
+  {{- include "chart.labels" . | nindent 4 }}
+stringData:
+  GOOGLE_API_KEY: {{ required "googleApiKey.googleApiKey is required" .Values.googleApiKey.googleApiKey
+    | quote }}
+  GOOGLE_PROJECT_ID: {{ required "googleApiKey.googleProjectId is required" .Values.googleApiKey.googleProjectId
+    | quote }}
+type: Opaque

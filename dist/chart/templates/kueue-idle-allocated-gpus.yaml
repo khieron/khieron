@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chart.fullname" . }}-kueue-idle-allocated-gpus
+  labels:
+  {{- include "chart.labels" . | nindent 4 }}
+data:
+  kueue-idle-allocated-gpus___SKILL.md: {{ .Values.kueueIdleAllocatedGpus.kueueIdleAllocatedGpusSKILLMd
+    | toYaml | indent 1 }}
+  kueue-idle-allocated-gpus___assets___kueue-advisory-idle-gpu.json: {{ .Values.kueueIdleAllocatedGpus.kueueIdleAllocatedGpusAssetsKueueAdvisoryIdleGpuJson
+    | toYaml | indent 1 }}
+  kueue-idle-allocated-gpus___assets___kueue-advisory-tool-failed.json: {{ .Values.kueueIdleAllocatedGpus.kueueIdleAllocatedGpusAssetsKueueAdvisoryToolFailedJson
+    | toYaml | indent 1 }}
+  kueue-idle-allocated-gpus___scripts___get-dcgm-metrics.sh: {{ .Values.kueueIdleAllocatedGpus.kueueIdleAllocatedGpusScriptsGetDcgmMetricsSh
+    | toYaml | indent 1 }}
+  kueue-idle-allocated-gpus___scripts___get-metrics-api.sh: {{ .Values.kueueIdleAllocatedGpus.kueueIdleAllocatedGpusScriptsGetMetricsApiSh
+    | toYaml | indent 1 }}
+  kueue-idle-allocated-gpus___scripts___get-workload-by-pod.sh: {{ .Values.kueueIdleAllocatedGpus.kueueIdleAllocatedGpusScriptsGetWorkloadByPodSh
+    | toYaml | indent 1 }}
+---
+apiVersion: intelligence.aipcc-gpuaas.com/v1alpha1
+kind: KueueSkill
+metadata:
+  name: {{ include "chart.fullname" . }}-kueue-idle-allocated-gpus
+  labels:
+  {{- include "chart.labels" . | nindent 4 }}
+spec:
+  skillconfigref:
+    name: kueue-intelligence-kueue-idle-allocated-gpus
