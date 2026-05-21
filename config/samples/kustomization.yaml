@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- agency_v1alpha1_skill.yaml
+- agency_v1alpha1_advisory.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
