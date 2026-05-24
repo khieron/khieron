@@ -24,7 +24,7 @@ import (
 // SkillSpec defines the desired state of Skill.
 type SkillSpec struct {
 	// Skill is the agentic skill that will analyze the Kueue deployment
-	// These skills should be targetted and granular
+	// These skills should be targeted and granular
 	// Add more KueueSkill resources if you need them
 	// +kubebuilder:validation:Required
 	SkillConfigRef corev1.LocalObjectReference `json:"skillconfigref"`

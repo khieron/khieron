@@ -205,8 +205,8 @@ func (l *AgentRunnerLoop) runSkillAgentIfDue(ctx context.Context, entry *AgentEn
 			return fmt.Errorf("agent run error: %v", err)
 		}
 		// Accumulate token usage from each LLM call
-		if event.LLMResponse.UsageMetadata != nil {
-			usage := event.LLMResponse.UsageMetadata
+		if event.UsageMetadata != nil {
+			usage := event.UsageMetadata
 			runTokens.PromptTokenCount += usage.PromptTokenCount
 			runTokens.CandidatesTokenCount += usage.CandidatesTokenCount
 			runTokens.ThoughtsTokenCount += usage.ThoughtsTokenCount
@@ -214,8 +214,8 @@ func (l *AgentRunnerLoop) runSkillAgentIfDue(ctx context.Context, entry *AgentEn
 			runTokens.TotalTokenCount += usage.TotalTokenCount
 		}
 		// Inspect tool call results for errors
-		if event.LLMResponse.Content != nil {
-			for _, part := range event.LLMResponse.Content.Parts {
+		if event.Content != nil {
+			for _, part := range event.Content.Parts {
 				if part.FunctionResponse != nil {
 					resp := part.FunctionResponse.Response
 					exitCode, hasExitCode := resp["exit_code"]
@@ -231,8 +231,8 @@ func (l *AgentRunnerLoop) runSkillAgentIfDue(ctx context.Context, entry *AgentEn
 				}
 			}
 		}
-		if event.IsFinalResponse() && event.LLMResponse.Content != nil {
-			for _, part := range event.LLMResponse.Content.Parts {
+		if event.IsFinalResponse() && event.Content != nil {
+			for _, part := range event.Content.Parts {
 				responseText += part.Text
 			}
 		}
@@ -272,7 +272,7 @@ func (l *AgentRunnerLoop) runSkillAgentIfDue(ctx context.Context, entry *AgentEn
 	}
 
 	if len(toolErrors) > 0 {
-		return fmt.Errorf("Agent error. %s", responseText)
+		return fmt.Errorf("agent error. %s", responseText)
 	}
 
 	return nil
@@ -312,8 +312,8 @@ func (l *AgentRunnerLoop) RunWithPrompt(ctx context.Context, crKey types.Namespa
 		if err != nil {
 			return fmt.Errorf("agent run error: %v", err)
 		}
-		if event.IsFinalResponse() && event.LLMResponse.Content != nil {
-			for _, part := range event.LLMResponse.Content.Parts {
+		if event.IsFinalResponse() && event.Content != nil {
+			for _, part := range event.Content.Parts {
 				responseText += part.Text
 			}
 		}

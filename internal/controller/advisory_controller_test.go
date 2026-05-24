@@ -38,7 +38,7 @@ var _ = Describe("Advisory Controller", func() {
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: testNamespace,
 		}
 		advisory := &agencyv1alpha1.Advisory{}
 
@@ -49,7 +49,7 @@ var _ = Describe("Advisory Controller", func() {
 				resource := &agencyv1alpha1.Advisory{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: "default",
+						Namespace: testNamespace,
 					},
 					// TODO(user): Specify other spec details if needed.
 				}

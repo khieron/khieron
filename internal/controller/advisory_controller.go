@@ -83,7 +83,7 @@ func (r *AdvisoryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					advisory.Spec.Approver,
 					advisory.Status.Proposal,
 					advisory.Status.Advisory,
-					advisory.Status.Explaination,
+					advisory.Status.Explanation,
 				)
 				if err := r.RunnerLoop.RunWithPrompt(ctx, *ownerKey, prompt); err != nil {
 					log.Info("Failed to execute proposal", "name", advisory.Name, "error", err.Error())

@@ -179,10 +179,10 @@ type RunScriptResult struct {
 
 // CreateAdvisoryArgs defines the input for the create_advisory tool.
 type CreateAdvisoryArgs struct {
-	Name         string `json:"name"`
-	Advisory     string `json:"advisory"`
-	Explaination string `json:"explaination"`
-	Proposal     string `json:"proposal"`
+	Name        string `json:"name"`
+	Advisory    string `json:"advisory"`
+	Explanation string `json:"explanation"`
+	Proposal    string `json:"proposal"`
 }
 
 // CreateAdvisoryResult defines the output of the create_advisory tool.
@@ -217,7 +217,7 @@ func newCreateAdvisoryTool(k8sClient client.Client, scheme *runtime.Scheme, owne
 					if ref.UID == owner.UID {
 						// Update the existing advisory
 						now := metav1.Now()
-						existing.Status.Explaination = args.Explaination
+						existing.Status.Explanation = args.Explanation
 						existing.Status.Proposal = args.Proposal
 						existing.Status.Updated = &now
 						if err := k8sClient.Status().Update(ctx, existing); err != nil {
@@ -249,10 +249,10 @@ func newCreateAdvisoryTool(k8sClient client.Client, scheme *runtime.Scheme, owne
 
 		// Update the status with the advisory details
 		advisory.Status = agencyv1alpha1.AdvisoryStatus{
-			Advisory:     args.Advisory,
-			Explaination: args.Explaination,
-			Proposal:     args.Proposal,
-			Updated:      &now,
+			Advisory:    args.Advisory,
+			Explanation: args.Explanation,
+			Proposal:    args.Proposal,
+			Updated:     &now,
 		}
 		if err := k8sClient.Status().Update(ctx, advisory); err != nil {
 			return CreateAdvisoryResult{}, fmt.Errorf("failed to update Advisory status: %v", err)
@@ -326,7 +326,7 @@ func newRunScriptTool(skillDir string) (tool.Tool, error) {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-	crKey := req.NamespacedName.String()
+	crKey := req.String()
 
 	// Fetch the Skill CR
 	var skillCr agencyv1alpha1.Skill

@@ -28,11 +28,11 @@ type AdvisorySpec struct {
 
 // AdvisoryStatus defines the observed state of Advisory.
 type AdvisoryStatus struct {
-	Advisory     string       `json:"advisory,omitempty"`
-	Explaination string       `json:"explaination,omitempty"`
-	Proposal     string       `json:"proposal,omitempty"`
-	Updated      *metav1.Time `json:"advisoryupdatedtime,omitempty"`
-	Approved     *metav1.Time `json:"approvaltime,omitempty"`
+	Advisory    string       `json:"advisory,omitempty"`
+	Explanation string       `json:"explanation,omitempty"`
+	Proposal    string       `json:"proposal,omitempty"`
+	Updated     *metav1.Time `json:"advisoryupdatedtime,omitempty"`
+	Approved    *metav1.Time `json:"approvaltime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
