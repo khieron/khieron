@@ -197,6 +197,16 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default > dist/install.yaml
 
+HELMIFY ?= $(LOCALBIN)/helmify
+.PHONY: helmify
+helmify: $(HELMIFY) ## Download helmify locally if necessary.
+$(HELMIFY): $(LOCALBIN)
+	$(call go-install-tool,$(HELMIFY),github.com/arttor/helmify/cmd/helmify,latest)
+
+.PHONY: helm-chart
+helm-chart: manifests generate kustomize helmify ## Generate a Helm chart from kustomize output.
+	$(KUSTOMIZE) build config/default | $(HELMIFY) dist/chart
+
 ##@ Deployment
 
 ifndef ignore-not-found
