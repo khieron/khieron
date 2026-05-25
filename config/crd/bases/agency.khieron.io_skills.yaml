@@ -50,7 +50,7 @@ spec:
               skillconfigref:
                 description: |-
                   Skill is the agentic skill that will analyze the Kueue deployment
-                  These skills should be targetted and granular
+                  These skills should be targeted and granular
                   Add more KueueSkill resources if you need them
                 properties:
                   name:

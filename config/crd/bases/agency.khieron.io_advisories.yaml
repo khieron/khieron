@@ -55,7 +55,7 @@ spec:
               approvaltime:
                 format: date-time
                 type: string
-              explaination:
+              explanation:
                 type: string
               proposal:
                 type: string

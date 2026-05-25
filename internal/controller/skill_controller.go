@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"google.golang.org/adk/agent/llmagent"
+	"google.golang.org/adk/model"
 	"google.golang.org/adk/model/gemini"
 	"google.golang.org/adk/runner"
 	"google.golang.org/adk/session"
@@ -49,12 +50,26 @@ import (
 	agencyv1alpha1 "github.com/khieron/khieron/api/v1alpha1"
 )
 
+// ModelFactory creates a model.LLM instance for use by the agent.
+type ModelFactory func(ctx context.Context) (model.LLM, error)
+
+// NewGeminiModelFactory returns a ModelFactory that creates a Gemini model.
+func NewGeminiModelFactory(modelName string) ModelFactory {
+	return func(ctx context.Context) (model.LLM, error) {
+		return gemini.NewModel(ctx, modelName, &genai.ClientConfig{
+			APIKey:  os.Getenv("GOOGLE_API_KEY"),
+			Backend: genai.BackendGeminiAPI,
+		})
+	}
+}
+
 // SkillReconciler reconciles a Skill object
 type SkillReconciler struct {
 	client.Client
-	Scheme     *runtime.Scheme
-	Recorder   record.EventRecorder
-	RunnerLoop *AgentRunnerLoop
+	Scheme       *runtime.Scheme
+	Recorder     record.EventRecorder
+	RunnerLoop   *AgentRunnerLoop
+	ModelFactory ModelFactory
 }
 
 // UpdateOwnerArgs defines the input for the update_owner tool.
@@ -428,17 +443,14 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	scriptTools = append(scriptTools, setAdvisoryLabelsTool)
 
-	model, err := gemini.NewModel(ctx, "gemini-3.1-flash-lite", &genai.ClientConfig{
-		APIKey:  os.Getenv("GOOGLE_API_KEY"),
-		Backend: genai.BackendGeminiAPI,
-	})
+	llmModel, err := r.ModelFactory(ctx)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to create Gemini model: %v", err)
+		return ctrl.Result{}, fmt.Errorf("failed to create model: %v", err)
 	}
 
 	skillAgent, err := llmagent.New(llmagent.Config{
 		Name:        "skill_user_agent",
-		Model:       model,
+		Model:       llmModel,
 		Description: "Monitor System",
 		Instruction: "You are a helpful assistant that understands the system and can help diagnose problems with it. You can run scripts from the skill's scripts/ directory using the run_script tool. You can raise advisories using the create_advisory tool. You can modify the owning Skill using the update_owner tool. You can label an advisory with the related Job's name and namespace using the set_advisory_labels tool, so the controller can track and clean up advisories when the related Job is deleted.",
 		Tools:       scriptTools,

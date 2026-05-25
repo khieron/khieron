@@ -18,9 +18,15 @@ package controller
 
 import (
 	"context"
+	"iter"
+	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"google.golang.org/adk/model"
+	"google.golang.org/genai"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -30,9 +36,24 @@ import (
 	agencyv1alpha1 "github.com/khieron/khieron/api/v1alpha1"
 )
 
+type mockModel struct{}
+
+func (m *mockModel) Name() string { return "mock" }
+
+func (m *mockModel) GenerateContent(_ context.Context, _ *model.LLMRequest, _ bool) iter.Seq2[*model.LLMResponse, error] {
+	return func(yield func(*model.LLMResponse, error) bool) {
+		yield(&model.LLMResponse{
+			Content:      genai.NewContentFromText("No issues found.", genai.RoleModel),
+			FinishReason: genai.FinishReasonStop,
+			TurnComplete: true,
+		}, nil)
+	}
+}
+
 var _ = Describe("Skill Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
+		const configMapName = "kueue-jobs-stuck"
 
 		ctx := context.Background()
 
@@ -43,34 +64,72 @@ var _ = Describe("Skill Controller", func() {
 		skill := &agencyv1alpha1.Skill{}
 
 		BeforeEach(func() {
+			By("creating the ConfigMap with skill contents")
+			skillDir := filepath.Join("..", "..", "config", "skills", "kueue-jobs-stuck")
+			cmData := map[string]string{}
+			for key, relPath := range map[string]string{
+				"kueue-jobs-stuck___SKILL.md":                                 "SKILL.md",
+				"kueue-jobs-stuck___assets___kueue-advisory-tool-failed.json": filepath.Join("assets", "kueue-advisory-tool-failed.json"),
+				"kueue-jobs-stuck___assets___kueue-advisory-jobs-stuck.json":  filepath.Join("assets", "kueue-advisory-jobs-stuck.json"),
+				"kueue-jobs-stuck___scripts___get-jobs-stuck.sh":              filepath.Join("scripts", "get-jobs-stuck.sh"),
+			} {
+				data, err := os.ReadFile(filepath.Join(skillDir, relPath))
+				Expect(err).NotTo(HaveOccurred())
+				cmData[key] = string(data)
+			}
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: testNamespace,
+				},
+				Data: cmData,
+			}
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: configMapName, Namespace: testNamespace}, &corev1.ConfigMap{})
+			if err != nil && errors.IsNotFound(err) {
+				Expect(k8sClient.Create(ctx, cm)).To(Succeed())
+			}
+
 			By("creating the custom resource for the Kind Skill")
-			err := k8sClient.Get(ctx, typeNamespacedName, skill)
+			err = k8sClient.Get(ctx, typeNamespacedName, skill)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &agencyv1alpha1.Skill{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: testNamespace,
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: agencyv1alpha1.SkillSpec{
+						SkillConfigRef: corev1.LocalObjectReference{
+							Name: configMapName,
+						},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &agencyv1alpha1.Skill{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Cleanup the specific resource instance Skill")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+
+			By("Cleanup the ConfigMap")
+			cm := &corev1.ConfigMap{}
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: configMapName, Namespace: testNamespace}, cm)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(k8sClient.Delete(ctx, cm)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &SkillReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:     k8sClient,
+				Scheme:     k8sClient.Scheme(),
+				RunnerLoop: NewAgentRunnerLoop(k8sClient),
+				ModelFactory: func(_ context.Context) (model.LLM, error) {
+					return &mockModel{}, nil
+				},
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
