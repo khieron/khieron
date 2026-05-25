@@ -1,5 +1,5 @@
-apiVersion: intelligence.aipcc-gpuaas.com/v1alpha1
-kind: KueueSkill
+apiVersion: agency.khieron.io/v1alpha1
+kind: Skill
 metadata:
   labels:
     app.kubernetes.io/name: kueue-idle-allocated-gpus

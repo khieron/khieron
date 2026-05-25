@@ -6,8 +6,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: quay.io/rh-ee-scondon/kueue-intelligence-bundle
-  newTag: latest
+  newName: example.com/khieron
+  newTag: v0.0.1
 
 generatorOptions:
   disableNameSuffixHash: true

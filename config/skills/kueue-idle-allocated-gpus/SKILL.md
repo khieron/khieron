@@ -26,12 +26,12 @@ Check the age of the workload and if more than 1 minute old investiagte further.
 
 ## Step 4: Raise an Advisory
 
-If you identify an issue that is not temporary and will not fix itself, raise a KueueAdvisory.
+If you identify an issue that is not temporary and will not fix itself, raise an Advisory.
 Use the load_skill_resource tool to load the appropriate advisory template from `assets/`:
 - `assets/kueue-advisory-tool-failed.json` -- when a script or tool execution fails
 - `assets/kueue-advisory-idle-gpu.json` -- when an idle GPU workload is found
 
-Fill in the template's placeholder fields (e.g. `{skill name}`, `{pod name}`, `{namespace}`, `{utilization}`, `{explaination}`, `{proposal}`) with specific details about the issue you discovered. The proposal field should describe a concrete action to resolve the issue (e.g. "Set spec.enableagent to false on the owning KueueSkill to suspend the agent"). Then use the create_advisory tool with the filled-in name, advisory, explaination, and proposal fields to create the KueueAdvisory CR.
+Fill in the template's placeholder fields (e.g. `{skill name}`, `{pod name}`, `{namespace}`, `{utilization}`, `{explaination}`, `{proposal}`) with specific details about the issue you discovered. The proposal field should describe a concrete action to resolve the issue (e.g. "Set spec.enableagent to false on the owning Skill to suspend the agent"). Then use the create_advisory tool with the filled-in name, advisory, explaination, and proposal fields to create the Advisory CR.
 
 ## Step 5: Repeat for other workloads.
 
@@ -47,4 +47,4 @@ If any script in Steps 1-3 fails, load the `assets/kueue-advisory-tool-failed.js
 - All scripts must be executed using the run_script tool. Do not attempt to access the filesystem or environment variables directly.
 - Advisory templates are in the `assets/` directory and must be loaded using the load_skill_resource tool.
 - Advisories must be created using the create_advisory tool with name, advisory, explaination, and proposal fields.
-- When an advisory proposal is approved by a human, you may be invoked to execute it. Use the update_owner tool to modify the owning KueueSkill (e.g. set enableagent to false to suspend the agent).
+- When an advisory proposal is approved by a human, you may be invoked to execute it. Use the update_owner tool to modify the owning Skill (e.g. set enableagent to false to suspend the agent).

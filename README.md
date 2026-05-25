@@ -1,12 +1,10 @@
-# Khieron - the lightweight kubernetes native agent framework
-
-If you find the major agentic frameworks heavy and overengineered for simple agents to manage small tasks, you're not alone.
+# Khieron - the lightweight Kubernetes-native agentic operator
 
 ## Introducing Project Khieron
 
-That's why we developed Project Khieron[<sup>1</sup>](#why-khieron) (pronounced Kay-ron), to bring kubernetes native operator design together with a Go native SDK [adk-go](https://adk.dev), to create a lightweight framework that brings together two simple concepts:
+We developed Project Khieron[<sup>1</sup>](#why-khieron) (pronounced Kay-ron) to bring Kubernetes native operator design, together with a Go native agentic SDK [adk-go](https://adk.dev), to create a lightweight operator that brings together two simple concepts:
 
-* **Skills** (for a flexible and dynamic way of creating single minded single task agents) and 
+* **Skills** (for a flexible and dynamic way of creating single minded single task agents) and
 * **Advisories** (a Human In the Loop mechanism in a familiar CRD style)
 
 ### The lightweight advantage
@@ -15,25 +13,31 @@ Commonly cited agentic frameworks for Kubernetes tend to be general purpose behe
 
 If you're trying to acheieve a simple task to manage your cluster, it can feel like using a sledgehammer to crack a nut.
 
+By keeping it it simple, we're not trying to give an interactive interface (like a chatbot). Instead we enable granular skills looped on a regular cadence, with interactivity given through Accept/Reject decisions on Advisories.
+
 ### Simplicity throughout
 
-Khieron uses the Agent Development Tookit (Go version) bundled inside the controller, with no Python dependencies (greatly reducing the size of the pod and the startup time), making it suitable for Edge use cases.
+Khieron uses the Agent Development Tookit (Go version) bundled inside the controller, with no bloated Python dependencies (greatly reducing the size of the pod and the startup time), making it suitable for Edge use cases.
 
 There are no child containers to manage. No LiteLLM. No LangChain/LangGrpah.
 
 ### Flexibility
 
-As a backend model the ADK provides several options for connecting to models such as Gemini or Claude or to self hosted models like Gemma.
+For accesing a backend model, the ADK provides several options for connecting Gemini or Claude or to self hosted models like Gemma.
 
 ### Dynamic configuration
 
 The `Skill` CRD is linked to a `ConfigMap` that contains a **Skill.md** file and some `assets`, `scripts` and `references`. Each Skill dynamically creates **one** Agent and runs in a loop doing one task.
+
+Skills follow the standardized abbroach of the [Agent Skill Specification](https://agentskills.io/specification), and can benefit from the ecosystem support and tooling around that standard.
 
 ### Internal and External Tooling
 
 The Skill CRD contains an `assets` folder to contain bash scripts used as Externally defined tools.
 
 The controller also has some internally defined tools, written in Go, covering many useful gernal puspose tasks on the Kubernetes API. These are available to the Skills to perform tasks.
+
+> Support for MCP servers as additional tooling will be added in a future release.
 
 ### Kubernetes Native Human In the Loop
 
