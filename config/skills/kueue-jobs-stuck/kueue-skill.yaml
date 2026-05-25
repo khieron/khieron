@@ -7,4 +7,4 @@ metadata:
   name: kueue-jobs-stuck
 spec:
   skillconfigref:
-    name: "kueue-intelligence-kueue-jobs-stuck"
+    name: "khieron-kueue-jobs-stuck"

@@ -60,6 +60,14 @@ var _ = Describe("Manager", Ordered, func() {
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to label namespace with restricted policy")
 
+		if apiKey := os.Getenv("GOOGLE_API_KEY"); apiKey != "" {
+			By("creating the google-api-key secret")
+			cmd = exec.Command("kubectl", "create", "secret", "generic", "google-api-key",
+				"--from-literal=GOOGLE_API_KEY="+apiKey, "-n", namespace)
+			_, err = utils.Run(cmd)
+			Expect(err).NotTo(HaveOccurred(), "Failed to create google-api-key secret")
+		}
+
 		By("installing CRDs")
 		cmd = exec.Command("make", "install")
 		_, err = utils.Run(cmd)
@@ -72,8 +80,13 @@ var _ = Describe("Manager", Ordered, func() {
 	})
 
 	// After all tests have been executed, clean up by undeploying the controller, uninstalling CRDs,
-	// and deleting the namespace.
+	// and deleting the namespace. Set E2E_SKIP_CLEANUP=true to leave resources in place for inspection.
 	AfterAll(func() {
+		if os.Getenv("E2E_SKIP_CLEANUP") != "" {
+			By("skipping cleanup (E2E_SKIP_CLEANUP is set)")
+			return
+		}
+
 		By("cleaning up the curl pod for metrics")
 		cmd := exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
 		_, _ = utils.Run(cmd)

@@ -5,7 +5,7 @@ license: Apache-2.0
 metadata:
   author: Sean Condon
   version: "0.1.0"
-compatibility: Part of kueue-intelligence operator. Requires Kueue operator on a Kubernetes cluster.
+compatibility: Used by khieron operator. Requires Kueue operator on a Kubernetes cluster.
 ---
 
 # Kueue Idle Allocated GPU detector

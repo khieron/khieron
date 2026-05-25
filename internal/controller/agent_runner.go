@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"iter"
 	"os"
 	"strings"
 	"sync"
@@ -26,7 +27,9 @@ import (
 
 	agencyv1alpha1 "github.com/khieron/khieron/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -35,6 +38,9 @@ import (
 	"google.golang.org/adk/session"
 	"google.golang.org/genai"
 )
+
+const RunRequestedAnnotation = "khieron.io/run-requested"
+const KHIERON = "khieron"
 
 // AgentEntry holds a cached agent and its associated metadata.
 type AgentEntry struct {
@@ -50,6 +56,7 @@ type AgentEntry struct {
 // AgentRunnerLoop is a manager.Runnable that periodically executes cached agents.
 type AgentRunnerLoop struct {
 	client.Client
+	Scheme *runtime.Scheme
 
 	mu     sync.RWMutex
 	agents map[string]*AgentEntry // keyed by CR namespaced name string
@@ -59,9 +66,10 @@ type AgentRunnerLoop struct {
 }
 
 // NewAgentRunnerLoop creates a new AgentRunnerLoop.
-func NewAgentRunnerLoop(c client.Client) *AgentRunnerLoop {
+func NewAgentRunnerLoop(c client.Client, scheme *runtime.Scheme) *AgentRunnerLoop {
 	return &AgentRunnerLoop{
 		Client: c,
+		Scheme: scheme,
 		agents: make(map[string]*AgentEntry),
 		notify: make(chan struct{}, 1),
 	}
@@ -81,6 +89,14 @@ func (l *AgentRunnerLoop) Register(key string, entry *AgentEntry) {
 	l.agents[key] = entry
 
 	// Signal the runner loop to re-evaluate
+	select {
+	case l.notify <- struct{}{}:
+	default:
+	}
+}
+
+// Notify signals the runner loop to re-evaluate schedules immediately.
+func (l *AgentRunnerLoop) Notify() {
 	select {
 	case l.notify <- struct{}{}:
 	default:
@@ -150,82 +166,65 @@ func (l *AgentRunnerLoop) runDueAgents(ctx context.Context) {
 	}
 }
 
-// runSkillAgentIfDue checks the CR's lastAnalyzedAt and runs the agent if the interval has elapsed.
-func (l *AgentRunnerLoop) runSkillAgentIfDue(ctx context.Context, entry *AgentEntry) error {
-	log := logf.FromContext(ctx).WithName("agent-runner")
+// agentRunResult holds the outcome of an agent execution.
+type agentRunResult struct {
+	ResponseText    string
+	ToolErrors      []string
+	AdvisoryCreated bool
+	Tokens          agencyv1alpha1.TokenUsage
+}
 
-	// Fetch the current CR to check lastAnalyzedAt
-	var skill agencyv1alpha1.Skill
-	if err := l.Get(ctx, entry.CRKey, &skill); err != nil {
-		return fmt.Errorf("failed to get CR %q: %v", entry.CRKey, err)
-	}
-
-	// Check if the agent is enabled
+// isRunDue checks whether the skill agent should run now based on interval, enable flag, and force-run annotation.
+func isRunDue(skill *agencyv1alpha1.Skill, interval time.Duration) bool {
 	if !skill.Spec.EnableAgent {
-		log.Info("Agent disabled, skipping run", "cr", entry.CRKey.String())
-		return nil
+		return false
 	}
-
-	// Check if enough time has elapsed
+	if requested, ok := skill.Annotations[RunRequestedAnnotation]; ok {
+		requestedTime, err := time.Parse(time.RFC3339, requested)
+		if err == nil {
+			if skill.Status.LastAnalyzedAt == nil || requestedTime.After(skill.Status.LastAnalyzedAt.Time) {
+				return true
+			}
+		}
+	}
 	if skill.Status.LastAnalyzedAt != nil {
-		elapsed := time.Since(skill.Status.LastAnalyzedAt.Time)
-		if elapsed < entry.Interval {
-			return nil // Not due yet
+		if time.Since(skill.Status.LastAnalyzedAt.Time) < interval {
+			return false
 		}
 	}
+	return true
+}
 
-	// Verify skill directory still exists
-	if _, err := os.Stat(entry.SkillDir); err != nil {
-		log.Info("Skill directory missing, agent needs rebuild",
-			"cr", entry.CRKey.String(), "skillDir", entry.SkillDir, "error", err.Error())
-		return fmt.Errorf("skill directory %q does not exist: %v", entry.SkillDir, err)
-	}
-	log.Info("Running agent", "cr", entry.CRKey.String(), "skillDir", entry.SkillDir)
+// processAgentEvents consumes the event stream from an agent run and collects the result.
+func processAgentEvents(ctx context.Context, events iter.Seq2[*session.Event, error], crKey string) (*agentRunResult, error) {
+	log := logf.FromContext(ctx).WithName("agent-runner")
+	result := &agentRunResult{}
 
-	// Create a new session for each run
-	createResp, err := entry.SessionService.Create(ctx, &session.CreateRequest{
-		AppName: "kueue-intelligence",
-		UserID:  "controller",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create session: %v", err)
-	}
-
-	userMsg := genai.NewContentFromText(
-		"Investigate Kueue on this system",
-		genai.RoleUser,
-	)
-
-	var responseText string
-	var toolErrors []string
-	var runTokens agencyv1alpha1.TokenUsage
-
-	for event, err := range entry.Runner.Run(ctx, "controller", createResp.Session.ID(), userMsg, agent.RunConfig{}) {
+	for event, err := range events {
 		if err != nil {
-			return fmt.Errorf("agent run error: %v", err)
+			return nil, fmt.Errorf("agent run error: %v", err)
 		}
-		// Accumulate token usage from each LLM call
 		if event.UsageMetadata != nil {
 			usage := event.UsageMetadata
-			runTokens.PromptTokenCount += usage.PromptTokenCount
-			runTokens.CandidatesTokenCount += usage.CandidatesTokenCount
-			runTokens.ThoughtsTokenCount += usage.ThoughtsTokenCount
-			runTokens.ToolUsePromptTokenCount += usage.ToolUsePromptTokenCount
-			runTokens.TotalTokenCount += usage.TotalTokenCount
+			result.Tokens.PromptTokenCount += usage.PromptTokenCount
+			result.Tokens.CandidatesTokenCount += usage.CandidatesTokenCount
+			result.Tokens.ThoughtsTokenCount += usage.ThoughtsTokenCount
+			result.Tokens.ToolUsePromptTokenCount += usage.ToolUsePromptTokenCount
+			result.Tokens.TotalTokenCount += usage.TotalTokenCount
 		}
-		// Inspect tool call results for errors
 		if event.Content != nil {
 			for _, part := range event.Content.Parts {
+				if part.FunctionCall != nil && part.FunctionCall.Name == "create_advisory" {
+					result.AdvisoryCreated = true
+				}
 				if part.FunctionResponse != nil {
 					resp := part.FunctionResponse.Response
-					exitCode, hasExitCode := resp["exit_code"]
-					if hasExitCode {
-						code, isFloat := exitCode.(float64)
-						if isFloat && code != 0 {
+					if exitCode, ok := resp["exit_code"]; ok {
+						if code, isFloat := exitCode.(float64); isFloat && code != 0 {
 							detail := fmt.Sprintf("tool %q failed (exit_code=%d): %v",
 								part.FunctionResponse.Name, int(code), resp)
-							toolErrors = append(toolErrors, detail)
-							log.Info("Tool execution failed", "cr", entry.CRKey.String(), "detail", detail)
+							result.ToolErrors = append(result.ToolErrors, detail)
+							log.Info("Tool execution failed", "cr", crKey, "detail", detail)
 						}
 					}
 				}
@@ -233,46 +232,81 @@ func (l *AgentRunnerLoop) runSkillAgentIfDue(ctx context.Context, entry *AgentEn
 		}
 		if event.IsFinalResponse() && event.Content != nil {
 			for _, part := range event.Content.Parts {
-				responseText += part.Text
+				result.ResponseText += part.Text
 			}
 		}
 	}
+	return result, nil
+}
 
-	if len(toolErrors) > 0 {
+// runSkillAgentIfDue checks the CR's lastAnalyzedAt and runs the agent if the interval has elapsed.
+func (l *AgentRunnerLoop) runSkillAgentIfDue(ctx context.Context, entry *AgentEntry) error {
+	log := logf.FromContext(ctx).WithName("agent-runner")
+
+	var skill agencyv1alpha1.Skill
+	if err := l.Get(ctx, entry.CRKey, &skill); err != nil {
+		return fmt.Errorf("failed to get CR %q: %v", entry.CRKey, err)
+	}
+
+	if !isRunDue(&skill, entry.Interval) {
+		return nil
+	}
+
+	if _, err := os.Stat(entry.SkillDir); err != nil {
+		return fmt.Errorf("skill directory %q does not exist: %v", entry.SkillDir, err)
+	}
+	log.Info("Running agent", "cr", entry.CRKey.String(), "skillDir", entry.SkillDir)
+
+	createResp, err := entry.SessionService.Create(ctx, &session.CreateRequest{
+		AppName: KHIERON,
+		UserID:  "controller",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create session: %v", err)
+	}
+
+	userMsg := genai.NewContentFromText("Investigate this system", genai.RoleUser)
+	events := entry.Runner.Run(ctx, "controller", createResp.Session.ID(), userMsg, agent.RunConfig{})
+
+	result, err := processAgentEvents(ctx, events, entry.CRKey.String())
+	if err != nil {
+		return err
+	}
+
+	if len(result.ToolErrors) > 0 {
 		log.Info("Tool errors during agent run", "cr", entry.CRKey.String(),
-			"errors", strings.Join(toolErrors, "; "))
+			"errors", strings.Join(result.ToolErrors, "; "))
+	}
+	if len(result.ToolErrors) > 0 && !result.AdvisoryCreated {
+		log.Info("Agent did not create advisory for tool errors, creating fallback advisory",
+			"cr", entry.CRKey.String())
+		if err := l.createFallbackAdvisory(ctx, entry.CRKey, result.ToolErrors); err != nil {
+			log.Info("Failed to create fallback advisory", "cr", entry.CRKey.String(), "error", err.Error())
+		}
 	}
 	log.Info("Agent response", "cr", entry.CRKey.String(),
-		"response", responseText,
-		"promptTokens", runTokens.PromptTokenCount,
-		"candidatesTokens", runTokens.CandidatesTokenCount,
-		"thoughtsTokens", runTokens.ThoughtsTokenCount,
-		"toolUseTokens", runTokens.ToolUsePromptTokenCount,
-		"totalTokens", runTokens.TotalTokenCount)
+		"response", result.ResponseText,
+		"promptTokens", result.Tokens.PromptTokenCount,
+		"candidatesTokens", result.Tokens.CandidatesTokenCount,
+		"thoughtsTokens", result.Tokens.ThoughtsTokenCount,
+		"toolUseTokens", result.Tokens.ToolUsePromptTokenCount,
+		"totalTokens", result.Tokens.TotalTokenCount)
 
-	// Re-fetch the CR to avoid conflicts with stale resourceVersion
 	if err := l.Get(ctx, entry.CRKey, &skill); err != nil {
 		return fmt.Errorf("failed to re-fetch CR for status update: %v", err)
 	}
 
-	// Update status with token usage and timestamp
 	now := metav1.Now()
 	skill.Status.LastAnalyzedAt = &now
-	skill.Status.TokensLastRun = &runTokens
-
-	// Accumulate totals
+	skill.Status.TokensLastRun = &result.Tokens
 	if skill.Status.TokensTotal == nil {
 		skill.Status.TokensTotal = &agencyv1alpha1.TokensAccumulated{}
 	}
-	skill.Status.TokensTotal.TotalTokenCount += int64(runTokens.TotalTokenCount)
+	skill.Status.TokensTotal.TotalTokenCount += int64(result.Tokens.TotalTokenCount)
 	skill.Status.TokensTotal.RunCount++
 
 	if err := l.Status().Update(ctx, &skill); err != nil {
 		return fmt.Errorf("failed to update status: %v", err)
-	}
-
-	if len(toolErrors) > 0 {
-		return fmt.Errorf("agent error. %s", responseText)
 	}
 
 	return nil
@@ -298,7 +332,7 @@ func (l *AgentRunnerLoop) RunWithPrompt(ctx context.Context, crKey types.Namespa
 	log.Info("Running agent with custom prompt", "cr", crKey.String(), "prompt", prompt)
 
 	createResp, err := entry.SessionService.Create(ctx, &session.CreateRequest{
-		AppName: "kueue-intelligence",
+		AppName: KHIERON,
 		UserID:  "controller",
 	})
 	if err != nil {
@@ -320,6 +354,42 @@ func (l *AgentRunnerLoop) RunWithPrompt(ctx context.Context, crKey types.Namespa
 	}
 
 	log.Info("Agent proposal execution response", "cr", crKey.String(), "response", responseText)
+	return nil
+}
+
+// createFallbackAdvisory creates an advisory when the agent failed to do so after tool errors.
+func (l *AgentRunnerLoop) createFallbackAdvisory(ctx context.Context, crKey types.NamespacedName, toolErrors []string) error {
+	var owner agencyv1alpha1.Skill
+	if err := l.Get(ctx, crKey, &owner); err != nil {
+		return fmt.Errorf("failed to get owner Skill: %v", err)
+	}
+
+	now := metav1.Now()
+	advisory := &agencyv1alpha1.Advisory{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-tool-failed-", owner.Name),
+			Namespace:    crKey.Namespace,
+		},
+	}
+
+	if err := ctrl.SetControllerReference(&owner, advisory, l.Scheme); err != nil {
+		return fmt.Errorf("failed to set owner reference: %v", err)
+	}
+
+	if err := l.Create(ctx, advisory); err != nil {
+		return fmt.Errorf("failed to create Advisory: %v", err)
+	}
+
+	advisory.Status = agencyv1alpha1.AdvisoryStatus{
+		Advisory:    fmt.Sprintf("Tool execution failed during %s agent run", owner.Name),
+		Explanation: strings.Join(toolErrors, "; "),
+		Proposal:    "Investigate the tool failures and consider disabling the agent until the issue is resolved (set spec.enableAgent to false on the Skill CR)",
+		Updated:     &now,
+	}
+	if err := l.Status().Update(ctx, advisory); err != nil {
+		return fmt.Errorf("failed to update Advisory status: %v", err)
+	}
+
 	return nil
 }
 

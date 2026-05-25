@@ -205,17 +205,27 @@ func main() {
 		os.Exit(1)
 	}
 
+	runnerLoop := controller.NewAgentRunnerLoop(mgr.GetClient(), mgr.GetScheme())
+	if err := mgr.Add(runnerLoop); err != nil {
+		setupLog.Error(err, "unable to add agent runner loop to manager")
+		os.Exit(1)
+	}
+
 	if err := (&controller.SkillReconciler{
 		Client:       mgr.GetClient(),
 		Scheme:       mgr.GetScheme(),
 		ModelFactory: controller.NewGeminiModelFactory(modelName),
+		Recorder:     mgr.GetEventRecorderFor("skill-controller"),
+		RunnerLoop:   runnerLoop,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Skill")
 		os.Exit(1)
 	}
 	if err := (&controller.AdvisoryReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Recorder:   mgr.GetEventRecorderFor("advisory-controller"),
+		RunnerLoop: runnerLoop,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Advisory")
 		os.Exit(1)

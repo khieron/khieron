@@ -1,0 +1,11 @@
+# This patch injects the GOOGLE_API_KEY from a Kubernetes secret into the controller container.
+# The secret is optional — the pod will start without it, but agent runs will fail until it is created.
+- op: add
+  path: /spec/template/spec/containers/0/env
+  value:
+    - name: GOOGLE_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: google-api-key
+          key: GOOGLE_API_KEY
+          optional: true

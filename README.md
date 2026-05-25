@@ -115,6 +115,27 @@ kubectl apply -k config/samples/
 
 >**NOTE**: Ensure that the samples has default values to test it out.
 
+
+### Force an agent to run now
+
+Update its annotation
+
+```bash
+$NAMESPACE=<khieron namespace>
+SKILL=<skill name>
+kubectl -n $NAMESPACE annotate skill $SKILL khieron.io/run-requested=$(date -u +%FT%TZ) --overwrite
+```
+
+### Approve an Advisory
+
+Update its spec:
+
+```bash
+$NAMESPACE=<khieron namespace>
+$ADVISORY_NAME=<advisory name>
+kubectl -n $NAMESPACE patch advisory $ADVISORY_NAME --type merge -p '{"spec":{"approver":"sean"}}'
+```
+
 ### To Uninstall
 **Delete the instances (CRs) from the cluster:**
 
@@ -166,7 +187,7 @@ kubectl apply -f https://raw.githubusercontent.com/<org>/khieron/<tag or branch>
 
 ```sh
 go install github.com/arttor/helmify/cmd/helmify@latest
-kustomize build config/default | helmify dist/chart
+make helm-chart
 ```
 
 2. The chart is generated under `dist/chart/`. Users can install it with:

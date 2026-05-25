@@ -126,7 +126,7 @@ var _ = Describe("Skill Controller", func() {
 			controllerReconciler := &SkillReconciler{
 				Client:     k8sClient,
 				Scheme:     k8sClient.Scheme(),
-				RunnerLoop: NewAgentRunnerLoop(k8sClient),
+				RunnerLoop: NewAgentRunnerLoop(k8sClient, k8sClient.Scheme()),
 				ModelFactory: func(_ context.Context) (model.LLM, error) {
 					return &mockModel{}, nil
 				},

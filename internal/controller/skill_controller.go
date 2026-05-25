@@ -286,12 +286,15 @@ func newRunScriptTool(skillDir string) (tool.Tool, error) {
 		Name:        "run_script",
 		Description: "Executes a script from the skill's scripts/ directory and returns its output. Pass arguments to the script via the args array.",
 	}, func(ctx tool.Context, args RunScriptArgs) (RunScriptResult, error) {
+		log := logf.FromContext(ctx)
 		cleanPath := filepath.Clean(args.ScriptPath)
+		log.Info("run_script called", "requestedPath", args.ScriptPath, "cleanPath", cleanPath, "skillDir", skillDir)
 		if !strings.HasPrefix(cleanPath, "scripts/") {
 			return RunScriptResult{}, fmt.Errorf("script path %q must be within the scripts/ directory", args.ScriptPath)
 		}
 
 		fullPath := filepath.Join(skillDir, cleanPath)
+		log.Info("run_script executing", "fullPath", fullPath)
 		cmdArgs := append([]string{fullPath}, args.Args...)
 		cmd := exec.CommandContext(ctx, "bash", cmdArgs...)
 
@@ -369,6 +372,9 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	// Check if the cached agent is still valid (ConfigMap hasn't changed)
 	if cachedRV, exists := r.RunnerLoop.GetConfigMapRV(crKey); exists && cachedRV == configMap.ResourceVersion {
+		if _, hasRunRequest := skillCr.Annotations[RunRequestedAnnotation]; hasRunRequest {
+			r.RunnerLoop.Notify()
+		}
 		log.Info("Agent already cached and up to date", "cr", crKey)
 		return ctrl.Result{}, nil
 	}
@@ -377,7 +383,7 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		"resourceVersion", configMap.ResourceVersion)
 
 	// Write ConfigMap data to a temp directory for the skill toolset
-	skillDir, err := os.MkdirTemp("", "kueue-skills-*")
+	skillDir, err := os.MkdirTemp("", "khieron-skills-*")
 	log.Info("Created skill directory", "skillDir", skillDir)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create temp dir for skills: %v", err)
@@ -452,9 +458,23 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		Name:        "skill_user_agent",
 		Model:       llmModel,
 		Description: "Monitor System",
-		Instruction: "You are a helpful assistant that understands the system and can help diagnose problems with it. You can run scripts from the skill's scripts/ directory using the run_script tool. You can raise advisories using the create_advisory tool. You can modify the owning Skill using the update_owner tool. You can label an advisory with the related Job's name and namespace using the set_advisory_labels tool, so the controller can track and clean up advisories when the related Job is deleted.",
-		Tools:       scriptTools,
-		Toolsets:    []tool.Toolset{skillToolset},
+		Instruction: `You are an autonomous SRE agent. On each run you MUST:
+1. Call list_skills to discover available skills.
+2. Call load_skill for each skill to read its SKILL.md instructions.
+3. Follow those instructions exactly, step by step.
+4. Use the run_script tool to execute scripts from the skill's scripts/ directory. Do NOT assume scripts are missing — always attempt to run them.
+5. Use load_skill_resource to read templates from assets/ or references/.
+6. Use create_advisory to raise advisories, then set_advisory_labels to label them.
+7. Use update_owner if a skill instruction tells you to modify the owning Skill CR.
+Never skip steps or assume failure without calling the tools.
+
+CRITICAL ERROR HANDLING RULE: When ANY tool call fails or any script returns a non-zero exit code, you MUST:
+  a) Call load_skill_resource to load the advisory template from the skill's assets/ directory (e.g. "assets/kueue-advisory-tool-failed.json").
+  b) Fill in the template's placeholder fields with specific details about the failure.
+  c) Call create_advisory with the filled-in name, advisory, explanation, and proposal fields.
+NEVER respond with just text about an error. You MUST ALWAYS call create_advisory for every error.`,
+		Tools:    scriptTools,
+		Toolsets: []tool.Toolset{skillToolset},
 	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create agent: %v", err)
@@ -462,7 +482,7 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	sessionService := session.InMemoryService()
 	agentRunner, err := runner.New(runner.Config{
-		AppName:        "khieron",
+		AppName:        KHIERON,
 		Agent:          skillAgent,
 		SessionService: sessionService,
 	})

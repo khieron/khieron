@@ -41,6 +41,10 @@ patches:
 - path: manager_metrics_patch.yaml
   target:
     kind: Deployment
+# [API-KEY] Inject GOOGLE_API_KEY from a Kubernetes secret into the controller container.
+- path: manager_api_key_patch.yaml
+  target:
+    kind: Deployment
 
 # Uncomment the patches line if you enable Metrics and CertManager
 # [METRICS-WITH-CERTS] To enable metrics protected with certManager, uncomment the following line.

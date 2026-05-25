@@ -7,4 +7,4 @@ metadata:
   name: kueue-idle-allocated-gpus
 spec:
   skillconfigref:
-    name: "kueue-intelligence-kueue-idle-allocated-gpus"
+    name: "khieron-kueue-idle-allocated-gpus"
