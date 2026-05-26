@@ -2,9 +2,9 @@ apiVersion: agency.khieron.io/v1alpha1
 kind: Skill
 metadata:
   labels:
-    app.kubernetes.io/name: kueue-jobs-stuck
+    app.kubernetes.io/name: kueue-idle-allocated-gpus
     app.kubernetes.io/managed-by: kustomize
-  name: kueue-jobs-stuck
+  name: kueue-idle-allocated-gpus
 spec:
   skillconfigref:
-    name: "khieron-kueue-jobs-stuck"
+    name: "kueue-idle-allocated-gpus"

@@ -63,15 +63,97 @@ In Greek mythology, [Chiron](https://en.wikipedia.org/wiki/Chiron), also Cheiron
 
 > Khieron follows the [rule](https://en.wikipedia.org/wiki/I_before_E_except_after_C) `i` before `e` except after `c` in our interpretation.
 
-## Getting Started
+## Installation
 
-The Agent requires a GOOGLE_API_KEY. Create an API Key in [Google AI Studio](https://aistudio.google.com/app/apikey).
+> The Agent requires a GOOGLE_API_KEY. Create an API Key in [Google AI Studio](https://aistudio.google.com/app/apikey).
+
+Install through Helm with a Google API Key:
+
+```bash
+NAMESPACE=khieron-system
+GOOGLE_API_KEY=<your key from Google>
+helm -n khieron-system install --create-namespace khieron ./dist/chart/ --set googleApiKey=$GOOGLE_API_KEY
+```
+
+Then install sample skills:
+
+```bash
+kustomize build example-skills | kubectl apply -n $NAMESPACE -f - 
+```
+
+To delete them use:
+
+```bash
+kustomize build example-skills | kubectl delete --ignore-not-found=true -n $NAMESPACE -f -
+```
+
+## Operation
+
+### Force a Skill to run now
+
+Skills run every 5 mins (configurable). To force it to run now update its annotation:
+
+```bash
+$NAMESPACE=<khieron namespace>
+SKILL=<skill name>
+kubectl -n $NAMESPACE annotate skill $SKILL khieron.io/run-requested=$(date -u +%FT%TZ) --overwrite
+```
+
+### Approve an Advisory
+
+If an advisory is create it will have a `proposal`. To accept the proposal update the Advisory spec:
+
+```bash
+$NAMESPACE=<khieron namespace>
+$ADVISORY_NAME=<advisory name>
+kubectl -n $NAMESPACE patch advisory $ADVISORY_NAME --type merge -p '{"spec":{"approver":"admin"}}'
+```
+
+### Tracking usage
+
+The `Skill` will keep track of the token usage everytime it is run. These are visible in the status of the Skill, along with the total usage since it started:
+
+```bash
+kubectl -n $NAMESPACE describe skill $SKILL
+```
+
+Example output:
+
+```
+Spec:                                                                                                   Enableagent:  true                               
+  Intervalminute:  5                                 
+  Skillconfigref:
+    Name:  kueue-idle-allocated-gpus                                           
+Status:                                                  
+  Lastanalysedat: 2026-05-26T09:51:07Z                                 
+  Tokens Last Run:                                      
+    Candidates Token Count:  256                         
+    Prompt Token Count:      15853                         
+    Total Token Count:       16109                         
+  Tokens Total:
+    Run Count:          1                              
+    Total Token Count:  16109
+```
+
+### Pausing a Skill
+
+It is not necessary to delte the Skill to pause the agent. This can be done by setting it's `Enableagent` attribute to false.
+
+```bash
+$NAMESPACE=<khieron namespace>
+$SKILL=<skill name>
+kubectl -n $NAMESPACE patch skill $SKILL --type merge -p '{"spec":{"enableagent":false}}'
+```
+
+
+## Developer Getting Started
 
 Create a secret to keep this key:
 
 ```bash
 NAMESPACE=<your-namespace>
 GOOGLE_API_KEY=<your api key>
+kubectl create namespace $NAMESPACE
 kubectl create secret generic google-api-key \
   --from-literal=GOOGLE_API_KEY="$GOOGLE_API_KEY" \
   -n $NAMESPACE
@@ -120,25 +202,6 @@ kubectl apply -k config/samples/
 >**NOTE**: Ensure that the samples has default values to test it out.
 
 
-### Force an agent to run now
-
-Update its annotation
-
-```bash
-$NAMESPACE=<khieron namespace>
-SKILL=<skill name>
-kubectl -n $NAMESPACE annotate skill $SKILL khieron.io/run-requested=$(date -u +%FT%TZ) --overwrite
-```
-
-### Approve an Advisory
-
-Update its spec:
-
-```bash
-$NAMESPACE=<khieron namespace>
-$ADVISORY_NAME=<advisory name>
-kubectl -n $NAMESPACE patch advisory $ADVISORY_NAME --type merge -p '{"spec":{"approver":"sean"}}'
-```
 
 ### To Uninstall
 **Delete the instances (CRs) from the cluster:**

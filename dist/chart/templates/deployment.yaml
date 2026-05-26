@@ -30,7 +30,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: GOOGLE_API_KEY
-              name: google-api-key
+              name: {{ include "chart.fullname" . }}-google-api-key
               optional: true
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}

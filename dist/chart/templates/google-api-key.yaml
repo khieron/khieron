@@ -5,8 +5,6 @@ metadata:
   labels:
   {{- include "chart.labels" . | nindent 4 }}
 stringData:
-  GOOGLE_API_KEY: {{ required "googleApiKey.googleApiKey is required" .Values.googleApiKey.googleApiKey
-    | quote }}
-  GOOGLE_PROJECT_ID: {{ required "googleApiKey.googleProjectId is required" .Values.googleApiKey.googleProjectId
+  GOOGLE_API_KEY: {{ required "googleApiKey is required" .Values.googleApiKey
     | quote }}
 type: Opaque
