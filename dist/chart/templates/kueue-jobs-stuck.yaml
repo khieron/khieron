@@ -14,12 +14,12 @@ data:
   kueue-jobs-stuck___scripts___get-jobs-stuck.sh: {{ .Values.kueueJobsStuck.kueueJobsStuckScriptsGetJobsStuckSh
     | toYaml | indent 1 }}
 ---
-apiVersion: intelligence.aipcc-gpuaas.com/v1alpha1
-kind: KueueSkill
+apiVersion: agency.khieron.io/v1alpha1
+kind: Skill
 metadata:
   name: {{ include "chart.fullname" . }}-kueue-jobs-stuck
   labels:
   {{- include "chart.labels" . | nindent 4 }}
 spec:
   skillconfigref:
-    name: kueue-intelligence-kueue-jobs-stuck
+    name: khieron-kueue-jobs-stuck

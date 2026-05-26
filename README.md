@@ -2,18 +2,18 @@
 
 ## Introducing Project Khieron
 
-We developed Project Khieron[<sup>1</sup>](#why-khieron) (pronounced Kay-ron) to bring Kubernetes native operator design, together with a Go native agentic SDK [adk-go](https://adk.dev), to create a lightweight operator that brings together two simple concepts:
+Khieron[<sup>1</sup>](#why-khieron) (pronounced Kay-ron) brings Kubernetes native operator design, together with a Go native agentic SDK [adk-go](https://adk.dev), to create a lightweight operator that brings together two simple concepts:
 
-* **Skills** (for a flexible and dynamic way of creating single minded single task agents) and
-* **Advisories** (a Human In the Loop mechanism in a familiar CRD style)
+* **Skills** - for a flexible and dynamic way of creating single minded single task agents and
+* **Advisories**   a Human In the Loop mechanism in a familiar CRD style
 
 ### The lightweight advantage
 
-Commonly cited agentic frameworks for Kubernetes tend to be general purpose behemoths, capable of doing many external facing tasks, but also bringing with them several external systems that and other projects that seem to have a combinatorial effect in increasing complexity.
+Commonly cited agentic frameworks for Kubernetes tend to be general purpose behemoths, capable of doing many external facing tasks, but also bringing with them several external systems that and other projects that have a combinatorial effect in increasing complexity.
 
 If you're trying to acheieve a simple task to manage your cluster, it can feel like using a sledgehammer to crack a nut.
 
-By keeping it it simple, we're not trying to give an interactive interface (like a chatbot). Instead we enable granular skills looped on a regular cadence, with interactivity given through Accept/Reject decisions on Advisories.
+By keeping it it simple, Khieron is not trying to give an interactive interface (like a chatbot). Instead it enables granular skills, looped on a regular cadence, with interactivity given through Accept/Reject decisions on Advisories.
 
 ### Simplicity throughout
 
@@ -29,7 +29,10 @@ For accesing a backend model, the ADK provides several options for connecting Ge
 
 The `Skill` CRD is linked to a `ConfigMap` that contains a **Skill.md** file and some `assets`, `scripts` and `references`. Each Skill dynamically creates **one** Agent and runs in a loop doing one task.
 
-Skills follow the standardized abbroach of the [Agent Skill Specification](https://agentskills.io/specification), and can benefit from the ecosystem support and tooling around that standard.
+Skills follow the standardized approach of the [Agent Skill Specification](https://agentskills.io/specification), and can benefit from the ecosystem support and tooling around that standard.
+
+See the [Skill Development Guide](./docs/skill-developer-guide.md) for more information on how
+to develop more skills.
 
 ### Internal and External Tooling
 
@@ -57,7 +60,8 @@ RAG system.
 ### Why Khieron
 
 In Greek mythology, [Chiron](https://en.wikipedia.org/wiki/Chiron), also Cheiron or Kheiron or Khieron, (Ancient Greek: Χείρων) was held to be the superlative centaur amongst his brethren since he was called the "wisest and justest of all the centaurs".
-> We're following the [rule](https://en.wikipedia.org/wiki/I_before_E_except_after_C) `i` before `e` except after `c` in our interpretation.
+
+> Khieron follows the [rule](https://en.wikipedia.org/wiki/I_before_E_except_after_C) `i` before `e` except after `c` in our interpretation.
 
 ## Getting Started
 

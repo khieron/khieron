@@ -18,12 +18,12 @@ data:
   kueue-idle-allocated-gpus___scripts___get-workload-by-pod.sh: {{ .Values.kueueIdleAllocatedGpus.kueueIdleAllocatedGpusScriptsGetWorkloadByPodSh
     | toYaml | indent 1 }}
 ---
-apiVersion: intelligence.aipcc-gpuaas.com/v1alpha1
-kind: KueueSkill
+apiVersion: agency.khieron.io/v1alpha1
+kind: Skill
 metadata:
   name: {{ include "chart.fullname" . }}-kueue-idle-allocated-gpus
   labels:
   {{- include "chart.labels" . | nindent 4 }}
 spec:
   skillconfigref:
-    name: kueue-intelligence-kueue-idle-allocated-gpus
+    name: khieron-kueue-idle-allocated-gpus
