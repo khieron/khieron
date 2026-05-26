@@ -145,7 +145,6 @@ $SKILL=<skill name>
 kubectl -n $NAMESPACE patch skill $SKILL --type merge -p '{"spec":{"enableagent":false}}'
 ```
 
-
 ## Developer Getting Started
 
 Create a secret to keep this key:
