@@ -65,7 +65,7 @@ var _ = Describe("Skill Controller", func() {
 
 		BeforeEach(func() {
 			By("creating the ConfigMap with skill contents")
-			skillDir := filepath.Join("..", "..", "config", "skills", "kueue-jobs-stuck")
+			skillDir := filepath.Join("..", "..", "example-skills", "kueue-jobs-stuck")
 			cmData := map[string]string{}
 			for key, relPath := range map[string]string{
 				"kueue-jobs-stuck___SKILL.md":                                 "SKILL.md",

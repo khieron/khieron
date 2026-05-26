@@ -10,7 +10,7 @@ controllerManager:
         drop:
         - ALL
     image:
-      repository: example.com/khieron
+      repository: quay.io/aicatalyst/khieron
       tag: v0.0.1
     resources:
       limits:
