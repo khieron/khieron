@@ -10,8 +10,8 @@ controllerManager:
         drop:
         - ALL
     image:
-      repository: quay.io/aicatalyst/khieron
-      tag: v0.0.2
+      repository: example.com/khieron
+      tag: v0.0.1
     imagePullPolicy: IfNotPresent
     resources:
       limits:
@@ -43,3 +43,7 @@ serviceAccount:
   automount: true
   create: true
   name: ""
+egressFirewall:
+  enabled: true
+  modelDnsName: generativelanguage.googleapis.com
+  clusterCIDR: 10.0.0.0/16

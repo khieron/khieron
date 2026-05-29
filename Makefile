@@ -155,6 +155,11 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 lint-config: golangci-lint ## Verify golangci-lint linter configuration
 	$(GOLANGCI_LINT) config verify
 
+.PHONY: trivy
+trivy: ## Run Trivy vulnerability scanner on go.mod and Dockerfile.
+	trivy fs --scanners vuln --pkg-types library go.mod
+	trivy config Dockerfile
+
 ##@ Build
 
 .PHONY: build
@@ -226,7 +231,11 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
+	echo "GOOGLE_API_KEY=$(GOOGLE_API_KEY)" > config/default/google-api-key.env
+	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f - ; \
+	status=$$? ; \
+	echo "GOOGLE_API_KEY=" > config/default/google-api-key.env ; \
+	exit $$status
 	$(MAKE) deploy-example-skills
 
 .PHONY: deploy-example-skills

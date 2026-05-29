@@ -122,11 +122,16 @@ var _ = Describe("Skill Controller", func() {
 			Expect(k8sClient.Delete(ctx, cm)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
+			By("Creating a temporary instruction file")
+			instructionFile := filepath.Join(GinkgoT().TempDir(), "instruction.txt")
+			Expect(os.WriteFile(instructionFile, []byte("You are a test agent."), 0644)).To(Succeed())
+
 			By("Reconciling the created resource")
 			controllerReconciler := &SkillReconciler{
-				Client:     k8sClient,
-				Scheme:     k8sClient.Scheme(),
-				RunnerLoop: NewAgentRunnerLoop(k8sClient, k8sClient.Scheme()),
+				Client:          k8sClient,
+				Scheme:          k8sClient.Scheme(),
+				RunnerLoop:      NewAgentRunnerLoop(k8sClient, k8sClient.Scheme()),
+				InstructionPath: instructionFile,
 				ModelFactory: func(_ context.Context) (model.LLM, error) {
 					return &mockModel{}, nil
 				},

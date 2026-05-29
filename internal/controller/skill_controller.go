@@ -66,10 +66,11 @@ func NewGeminiModelFactory(modelName string) ModelFactory {
 // SkillReconciler reconciles a Skill object
 type SkillReconciler struct {
 	client.Client
-	Scheme       *runtime.Scheme
-	Recorder     record.EventRecorder
-	RunnerLoop   *AgentRunnerLoop
-	ModelFactory ModelFactory
+	Scheme          *runtime.Scheme
+	Recorder        record.EventRecorder
+	RunnerLoop      *AgentRunnerLoop
+	ModelFactory    ModelFactory
+	InstructionPath string
 }
 
 // UpdateOwnerArgs defines the input for the update_owner tool.
@@ -454,27 +455,19 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, fmt.Errorf("failed to create model: %v", err)
 	}
 
+	data, err := os.ReadFile(r.InstructionPath)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to read instruction file %s: %v", r.InstructionPath, err)
+	}
+	instruction := strings.TrimSpace(string(data))
+
 	skillAgent, err := llmagent.New(llmagent.Config{
 		Name:        "skill_user_agent",
 		Model:       llmModel,
 		Description: "Monitor System",
-		Instruction: `You are an autonomous SRE agent. On each run you MUST:
-1. Call list_skills to discover available skills.
-2. Call load_skill for each skill to read its SKILL.md instructions.
-3. Follow those instructions exactly, step by step.
-4. Use the run_script tool to execute scripts from the skill's scripts/ directory. Do NOT assume scripts are missing — always attempt to run them.
-5. Use load_skill_resource to read templates from assets/ or references/.
-6. Use create_advisory to raise advisories, then set_advisory_labels to label them.
-7. Use update_owner if a skill instruction tells you to modify the owning Skill CR.
-Never skip steps or assume failure without calling the tools.
-
-CRITICAL ERROR HANDLING RULE: When ANY tool call fails or any script returns a non-zero exit code, you MUST:
-  a) Call load_skill_resource to load the advisory template from the skill's assets/ directory (e.g. "assets/kueue-advisory-tool-failed.json").
-  b) Fill in the template's placeholder fields with specific details about the failure.
-  c) Call create_advisory with the filled-in name, advisory, explanation, and proposal fields.
-NEVER respond with just text about an error. You MUST ALWAYS call create_advisory for every error.`,
-		Tools:    scriptTools,
-		Toolsets: []tool.Toolset{skillToolset},
+		Instruction: instruction,
+		Tools:       scriptTools,
+		Toolsets:    []tool.Toolset{skillToolset},
 	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create agent: %v", err)

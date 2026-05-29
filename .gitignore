@@ -26,4 +26,5 @@ go.work
 *.swo
 *~
 
-config/manager/rh-ee-*
+# Secret env files
+config/default/google-api-key.env
