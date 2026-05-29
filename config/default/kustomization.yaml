@@ -27,6 +27,7 @@ resources:
 #- ../prometheus
 # [METRICS] Expose the controller manager metrics service.
 - metrics_service.yaml
+- agent_instruction_configmap.yaml
 # [NETWORK POLICY] Protect the /metrics endpoint and Webhook Server with NetworkPolicy.
 # Only Pod(s) running a namespace labeled with 'metrics: enabled' will be able to gather the metrics.
 # Only CR(s) which requires webhooks and are applied on namespaces labeled with 'webhooks: enabled' will
@@ -42,6 +43,10 @@ patches:
     kind: Deployment
 # [API-KEY] Inject GOOGLE_API_KEY from a Kubernetes secret into the controller container.
 - path: manager_api_key_patch.yaml
+  target:
+    kind: Deployment
+# [INSTRUCTION] Mount the agent instruction ConfigMap into the controller container.
+- path: manager_instruction_patch.yaml
   target:
     kind: Deployment
 

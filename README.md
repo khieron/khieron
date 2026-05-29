@@ -7,6 +7,8 @@ Khieron[<sup>1</sup>](#why-khieron) (pronounced Kay-ron) brings Kubernetes nativ
 * **Skills** - for a flexible and dynamic way of creating single minded single task agents and
 * **Advisories**   a Human In the Loop mechanism in a familiar CRD style
 
+See [Examples Skills](#example-skills) below for a comprehensive guide to Skills.
+
 ### The lightweight advantage
 
 Commonly cited agentic frameworks for Kubernetes tend to be general purpose behemoths, capable of doing many external facing tasks, but also bringing with them several external systems that and other projects that have a combinatorial effect in increasing complexity.
@@ -72,6 +74,10 @@ By not having a chatbot interface, the risks of prompt injection attacks commonl
 
 On Openshift, the deployment uses an Egress Firewall to prevent tools from accessing network resources other than the model API (Gemini) and internal cluster based APIs, thereby reducing the risk of exfiltration by rogue scripts.
 
+### Observable and measurable
+
+Through ADK-go the agent can be integrated to OpenTelemetry (future).
+
 ### Non goals
 
 Khieron does not intend to be a comprehensive Agentic framework and is not designed to create a
@@ -98,18 +104,6 @@ helm -n khieron-system install --create-namespace khieron ./dist/chart/ -f dist/
 ```
 
 > To install on Openshift use `values-openshift.yaml` instead, to activate the Egress Firewall.
-
-Then install sample skills:
-
-```bash
-kustomize build example-skills | kubectl apply -n $NAMESPACE -f - 
-```
-
-To delete them use:
-
-```bash
-kustomize build example-skills | kubectl delete --ignore-not-found=true -n $NAMESPACE -f -
-```
 
 ## Operation
 
@@ -168,6 +162,13 @@ $NAMESPACE=<khieron namespace>
 $SKILL=<skill name>
 kubectl -n $NAMESPACE patch skill $SKILL --type merge -p '{"spec":{"enableagent":false}}'
 ```
+
+## Example Skills
+
+See [the stalled pod skill](./docs/example-skill.md) for a description on how to build and operator a example skill.
+
+See the [Skill developer guide](./docs/skill-developer-guide.md) to understand best practice in writing skills
+for Khieron.
 
 ## Developer Getting Started
 
