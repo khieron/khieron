@@ -215,12 +215,12 @@ func main() {
 	}
 
 	if err := (&controller.SkillReconciler{
-		Client:              mgr.GetClient(),
-		Scheme:              mgr.GetScheme(),
-		ModelFactory:        controller.NewGeminiModelFactory(modelName),
-		Recorder:            mgr.GetEventRecorderFor("skill-controller"),
-		RunnerLoop:          runnerLoop,
-		InstructionPath:     agentInstructionPath,
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		ModelFactory:    controller.NewGeminiModelFactory(modelName),
+		Recorder:        mgr.GetEventRecorderFor("skill-controller"),
+		RunnerLoop:      runnerLoop,
+		InstructionPath: agentInstructionPath,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Skill")
 		os.Exit(1)
