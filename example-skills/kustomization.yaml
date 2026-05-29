@@ -1,3 +1,5 @@
+namespace: khieron-system
+
 resources:
   - ./kueue-idle-allocated-gpus
   - ./kueue-jobs-stuck

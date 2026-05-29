@@ -1,0 +1,19 @@
+{{- if and .Values.egressFirewall .Values.egressFirewall.enabled }}
+apiVersion: k8s.ovn.org/v1
+kind: EgressFirewall
+metadata:
+  name: default
+  labels:
+  {{- include "chart.labels" . | nindent 4 }}
+spec:
+  egress:
+  - to:
+      dnsName: {{ .Values.egressFirewall.modelDnsName}}
+    type: Allow
+  - to:
+      cidrSelector: {{ .Values.egressFirewall.clusterCIDR }}
+    type: Allow
+  - to:
+      cidrSelector: 0.0.0.0/0
+    type: Deny
+{{- end }}
