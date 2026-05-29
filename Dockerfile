@@ -24,7 +24,7 @@ COPY internal/ internal/
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager cmd/main.go
 
 # Use UBI10 as minimal base image to package the manager binary
-FROM registry.access.redhat.com/ubi10-minimal
+FROM registry.access.redhat.com/ubi10-minimal:10.2
 
 RUN microdnf install jq bash tar vi -y && microdnf clean all
 WORKDIR /

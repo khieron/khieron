@@ -1,0 +1,33 @@
+name: Trivy
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  trivy-dependency-scan:
+    name: Scan dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner on go.mod
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scanners: vuln
+          pkg-types: library
+
+  trivy-dockerfile-scan:
+    name: Scan Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy config scanner on Dockerfile
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: Dockerfile

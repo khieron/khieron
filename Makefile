@@ -155,6 +155,11 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 lint-config: golangci-lint ## Verify golangci-lint linter configuration
 	$(GOLANGCI_LINT) config verify
 
+.PHONY: trivy
+trivy: ## Run Trivy vulnerability scanner on go.mod and Dockerfile.
+	trivy fs --scanners vuln --pkg-types library go.mod
+	trivy config Dockerfile
+
 ##@ Build
 
 .PHONY: build
