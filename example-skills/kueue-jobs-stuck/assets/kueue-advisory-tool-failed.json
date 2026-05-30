@@ -1,6 +1,0 @@
-{
-    "name": "tool-failed",
-    "advisory": "The Skill {skill name} failed",
-    "explaination": "{explaination}",
-    "proposal": "Suspend the Skill agent until the problem is fixed"
-}

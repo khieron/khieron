@@ -3,12 +3,50 @@
 To demonstrate the capabilities of Khieron, this page shows how to create a new Skill CR and
 how to put it in to operation.
 
-Defining the `SKILL.md` comes first, then the bash scripts that will act as internal tools and
-finally the assets such as Advisory templates.
+## Start a new Skill with **helm create**
 
-Once the Skill is defined, we declare a manifest whichg includes a configmap for the Skill files and a Skill CR and any necessary permissions that it needs. 
+To start a new Skill use the helm chart template in [skill-helm-chart-template](../skill-helm-chart-template/)
 
-## Designing SKILL.md
+```bash
+# Clone the repo
+git clone https://github.com/khieron/khieron
+KHIERON_LOCATION=$PWD/khieron
+
+# Change to your target folder
+cd <my folder>
+helm create monitor-pods-skill --starter $KHIERON_LOCATION/skill-helm-chart-template
+```
+
+This will create a new folder with placeholder files:
+
+```
+monitor-pods-skill
+├── Chart.yaml
+├── skill-files
+│   ├── assets
+│   │   └── advisory-template.json
+│   ├── scripts
+│   │   └── my-script.sh
+│   └── SKILL.md
+├── templates
+│   ├── configmap.yaml
+│   ├── _helpers.tpl
+│   ├── rolebinding.yaml
+│   ├── role.yaml
+│   ├── serviceaccount.yaml
+│   └── skill.yaml
+└── values.yaml
+```
+
+Defining the `SKILL.md` comes first, then the bash `scripts` that will act as internal tools and
+finally the `assets` such as Advisory templates.
+
+Once the Skill is defined the helm chart deploys it as a configmap and points to it from Skill CR.
+
+RBAC roles needed to run the scripts should be added to `role.yaml`. Add a ClusterRole and ClusterRoleBinding
+for accessing from multiple namespaces.
+
+## Defining SKILL.md
 
 Defining Skills generally follow the guidelines of the [Agent Skill specification](https://agentskills.io/specification). The structure of a Skill allows it to be loaded incrementally to minimize the impact on the operating context window of the agent.
 
@@ -152,7 +190,9 @@ by running them manually. They are held at `/tmp/<random-name>/<skill-name>/scri
 
 Json files that act as templates for the Advisory should be placed in the `assets` folder of the skill.
 
-`advisory_template_jobs_stuck.json`:
+Replace the template contents with:
+
+`monitor-pods-skill/skill-files/advisory-template.json`:
 ```json
 {
     "name": "pod-stuck",
@@ -165,23 +205,44 @@ Json files that act as templates for the Advisory should be placed in the `asset
 
 ## Defining the manifest and permissions
 
-The manifest should contain the Skill CR, the `ConfigMap` containing the files and any permissions that the scripts need. If the Skill acts on only one namespace then Role and Role Bindings should be added, otherwise use `ClusterRole` and `ClusterRoleBindings`.
-
-To create the `ConfigMap` from the files it is useful to use kustomize or Helm.
-
 For our example the skill manifest looks like:
 
-`skill-manifest.yaml`:
+`monitor-pods-skill/templates/skill.yaml`:
 ```yaml
+---
 apiVersion: agency.khieron.io/v1alpha1
 kind: Skill
 metadata:
+  name: {{ include "skill.name" . }}
   labels:
-    app.kubernetes.io/name: pods-stuck
-  name: pods-stuck
+    {{- include "skill.labels" . | nindent 4 }}
 spec:
   skillconfigref:
-    name: "pods-stuck"
+    name: {{ include "skill.name" . | quote }}
+  intervalminute: {{ .Values.skill.intervalMinute }}
+  enableagent: {{ .Values.skill.enableAgent }}
+```
+
+To allow pods to be accessed, add permissions to `role.yaml`:
+
+`monitor-pods-skill/templates/skill.yaml`:
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "skill.name" . }}
+  labels:
+    {{- include "skill.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
 ```
 
 

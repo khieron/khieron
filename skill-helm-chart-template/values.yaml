@@ -1,0 +1,6 @@
+---
+skill:
+  name: my-skill
+  intervalMinute: 5
+  enableAgent: true
+

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "skill.name" . }}
+  labels:
+    {{- include "skill.labels" . | nindent 4 }}
+data:
+  {{- $skillName := include "skill.name" . }}
+  {{- range $path, $_ := .Files.Glob "skill-files/**" }}
+  {{- $relPath := trimPrefix "skill-files/" $path }}
+  {{ printf "%s___%s" $skillName ($relPath | replace "/" "___") }}: |
+{{ $.Files.Get $path | indent 4 }}
+  {{- end }}

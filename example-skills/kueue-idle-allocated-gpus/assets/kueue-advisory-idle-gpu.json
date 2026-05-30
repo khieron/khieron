@@ -1,6 +1,0 @@
-{
-    "name": "idle-gpu",
-    "advisory": "GPU allocated to pod {pod name} in namespace {namespace} is showing low utilization ({utilization}%)",
-    "explaination": "{explaination}",
-    "proposal": "{proposal}"
-}
