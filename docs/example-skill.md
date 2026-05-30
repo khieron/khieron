@@ -76,16 +76,119 @@ deployed with the controller in the ConfigMap [agent-instruction](../config/defa
 
 ## Defining the scripts
 
-Scripts are currently limited to Bash scripts. We refer to these as external tools.
+Scripts are currently limited to Bash scripts. We refer to these as external tools. They run as a sub process of the controller using `exec()`;
 
 In `SKILL.md` you refer to these scripts by file name including the path starting with `skills/`.
+
+`assets/get_stuck_pods.sh`:
+```bash
+#!/bin/bash
+
+set -ex
+
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+CACERT="--cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+API="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
+
+# Get namespaces labelled with kueue.openshift.io/managed=true
+NAMESPACES=$(curl -sS -k -f ${CACERT} \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Accept: application/json" \
+  -G --data-urlencode 'labelSelector=kueue.openshift.io/managed=true' \
+  "${API}/api/v1/namespaces")
+
+if [ $? -ne 0 ]; then
+  echo "Failed to query namespaces: ${NAMESPACES}"
+  exit -1
+fi
+
+NS_LIST=$(echo "${NAMESPACES}" | jq -r '.items[].metadata.name')
+
+if [ -z "${NS_LIST}" ]; then
+  echo "[]"
+  exit 0
+fi
+
+# Collect non-running pods from each managed namespace
+RESULTS="[]"
+for NS in ${NS_LIST}; do
+  PODS=$(curl -sS -k -f ${CACERT} \
+    -H "Authorization: Bearer ${TOKEN}" \
+    -H "Accept: application/json" \
+    "${API}/api/v1/namespaces/${NS}/pods?fieldSelector=status.phase%21%3DRunning%2Cstatus.phase%21%3DSucceeded")
+
+  if [ $? -ne 0 ]; then
+    echo "Failed to query pods in namespace ${NS}: ${PODS}"
+    continue
+  fi
+
+  NS_RESULTS=$(echo "${PODS}" | jq '[.items[] | {
+    name: .metadata.name,
+    namespace: .metadata.namespace,
+    job: ([.metadata.ownerReferences[]? | select(.kind == "Job") | .name][0] // ""),
+    workload: (.metadata.annotations["kueue.x-k8s.io/workload"] // ""),
+    phase: .status.phase,
+    reason: (.status.reason // ""),
+    message: (.status.message // ""),
+    conditions: [.status.conditions[]? | {type: .type, status: .status, reason: (.reason // ""), message: (.message // "")}],
+    createdAt: .metadata.creationTimestamp
+  }]')
+
+  RESULTS=$(echo "${RESULTS}" "${NS_RESULTS}" | jq -s '.[0] + .[1]')
+done
+
+echo "${RESULTS}"
+
+exit 0
+```
+
+You should lint bash scripts like this with the [shellcheck](https://www.shellcheck.net/) utility.
+
+If necessary the scripts can be run and debugged inside the controller pod
+by running them manually. They are held at `/tmp/<random-name>/<skill-name>/scripts/<script-name>`.
 
 
 ## Defining the assets
 
+Json files that act as templates for the Advisory should be placed in the `assets` folder of the skill.
 
+`advisory_template_jobs_stuck.json`:
+```json
+{
+    "name": "pod-stuck",
+    "advisory": "Pod {pod} in namepsace {namespace} has been created but is stuck",
+    "explaination": "{explaination}",
+    "proposal": "Terminate the pod {pod} in namespace {namespace}"
+}
+
+```
 
 ## Defining the manifest and permissions
 
+The manifest should contain the Skill CR, the `ConfigMap` containing the files and any permissions that the scripts need. If the Skill acts on only one namespace then Role and Role Bindings should be added, otherwise use `ClusterRole` and `ClusterRoleBindings`.
+
+To create the `ConfigMap` from the files it is useful to use kustomize or Helm.
+
+For our example the skill manifest looks like:
+
+`skill-manifest.yaml`:
+```yaml
+apiVersion: agency.khieron.io/v1alpha1
+kind: Skill
+metadata:
+  labels:
+    app.kubernetes.io/name: pods-stuck
+  name: pods-stuck
+spec:
+  skillconfigref:
+    name: "pods-stuck"
+```
+
 
 ## Bundling it all together
+
+Because we want to edit the SKILL.md, scripts and assets as plain files, and
+not inside a YAML file in a Configmap, we use Helm to format it when deploying.
+
+The files in the ConfigMap need to keep their directory structure, so we use a `___` (triple underscore) pattern to replace the `/` in the path name temporariliy, and replace it when reading it.
+

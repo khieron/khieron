@@ -26,7 +26,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 # Use UBI10 as minimal base image to package the manager binary
 FROM registry.access.redhat.com/ubi10-minimal:10.2
 
-RUN microdnf install jq bash tar vi -y && microdnf clean all
+RUN microdnf install jq bash tar vi shellceck -y && microdnf clean all
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 1001

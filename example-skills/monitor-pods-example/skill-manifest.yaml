@@ -1,0 +1,9 @@
+apiVersion: agency.khieron.io/v1alpha1
+kind: Skill
+metadata:
+  labels:
+    app.kubernetes.io/name: pods-stuck
+  name: pods-stuck
+spec:
+  skillconfigref:
+    name: "pods-stuck"
