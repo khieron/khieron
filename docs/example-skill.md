@@ -17,6 +17,12 @@ cd <my folder>
 helm create monitor-pods-skill --starter $KHIERON_LOCATION/skill-helm-chart-template
 ```
 
+Change the name of the Skill in `values.yaml` e.g.:
+
+```bash
+sed -i 's/my-skill/monitor-pods-skill/g' monitor-pods-skill/values.yaml
+```
+
 This will create a new folder with placeholder files:
 
 ```
@@ -46,6 +52,8 @@ Once the Skill is defined the helm chart deploys it as a configmap and points to
 RBAC roles needed to run the scripts should be added to `role.yaml`. Add a ClusterRole and ClusterRoleBinding
 for accessing from multiple namespaces.
 
+Helm template command can then be used to preview the deployment.
+
 ## Defining SKILL.md
 
 Defining Skills generally follow the guidelines of the [Agent Skill specification](https://agentskills.io/specification). The structure of a Skill allows it to be loaded incrementally to minimize the impact on the operating context window of the agent.
@@ -69,7 +77,7 @@ External tools will be given in the `scripts/` directory of the Skill and can be
 `SKILL.md`:
 ```markdown
 ---
-name: monitor pods
+name: monitor-pods-skill
 description: Looks out for pods in the current namespace that are deployed but aren't running for some reason.
 license: Apache-2.0
 metadata:
@@ -205,24 +213,6 @@ Replace the template contents with:
 
 ## Defining the manifest and permissions
 
-For our example the skill manifest looks like:
-
-`monitor-pods-skill/templates/skill.yaml`:
-```yaml
----
-apiVersion: agency.khieron.io/v1alpha1
-kind: Skill
-metadata:
-  name: {{ include "skill.name" . }}
-  labels:
-    {{- include "skill.labels" . | nindent 4 }}
-spec:
-  skillconfigref:
-    name: {{ include "skill.name" . | quote }}
-  intervalminute: {{ .Values.skill.intervalMinute }}
-  enableagent: {{ .Values.skill.enableAgent }}
-```
-
 To allow pods to be accessed, add permissions to `role.yaml`:
 
 `monitor-pods-skill/templates/skill.yaml`:
@@ -248,8 +238,10 @@ rules:
 
 ## Bundling it all together
 
-Because we want to edit the SKILL.md, scripts and assets as plain files, and
-not inside a YAML file in a Configmap, we use Helm to format it when deploying.
+That's it! The `skill.yaml` and `configmap.yaml` to not need to be edited.
 
-The files in the ConfigMap need to keep their directory structure, so we use a `___` (triple underscore) pattern to replace the `/` in the path name temporariliy, and replace it when reading it.
+To see the manifest that will be produced use `helm template` command
 
+```bash
+helm -n my-namespace template --release-name foobar monitor-pods-skill
+```

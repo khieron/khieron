@@ -1,0 +1,6 @@
+{
+    "name": "pod-stuck",
+    "advisory": "Pod {pod} in namepsace {namespace} has been created but is stuck",
+    "explaination": "{explaination}",
+    "proposal": "Terminate the pod {pod} in namespace {namespace}"
+}

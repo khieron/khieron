@@ -1,0 +1,6 @@
+---
+skill:
+  name: monitor-pods-skill
+  intervalMinute: 5
+  enableAgent: true
+

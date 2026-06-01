@@ -330,9 +330,7 @@ func newRunScriptTool(skillDir string) (tool.Tool, error) {
 // +kubebuilder:rbac:groups=agency.khieron.io,resources=advisories/finalizers,verbs=update
 
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
-// +kubebuilder:rbac:groups="batch",resources=jobs,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
