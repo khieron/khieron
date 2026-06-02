@@ -51,6 +51,8 @@ endif
 OPERATOR_SDK_VERSION ?= v1.42.2
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
+# Namespace to deploy example skills into
+EXAMPLE_SKILLS_NAMESPACE ?= example-skills
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -239,16 +241,16 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	$(MAKE) deploy-example-skills
 
 .PHONY: deploy-example-skills
-deploy-example-skills: kustomize ## Deploy example skills to the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build example-skills | $(KUBECTL) apply -f -
+deploy-example-skills: ## Deploy example skills to the K8s cluster specified in ~/.kube/config.
+	helm upgrade --install monitor-pods-skill example-skills/monitor-pods-skill -n $(EXAMPLE_SKILLS_NAMESPACE) --create-namespace
 
 .PHONY: undeploy
 undeploy: kustomize undeploy-example-skills ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: undeploy-example-skills
-undeploy-example-skills: kustomize ## Undeploy example skills from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build example-skills | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+undeploy-example-skills: ## Undeploy example skills from the K8s cluster specified in ~/.kube/config.
+	helm uninstall monitor-pods-skill -n $(EXAMPLE_SKILLS_NAMESPACE) --ignore-not-found
 
 ##@ Dependencies
 

@@ -53,7 +53,7 @@ func (m *mockModel) GenerateContent(_ context.Context, _ *model.LLMRequest, _ bo
 var _ = Describe("Skill Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
-		const configMapName = "kueue-jobs-stuck"
+		const configMapName = "monitor-pods-skill"
 
 		ctx := context.Background()
 
@@ -65,13 +65,13 @@ var _ = Describe("Skill Controller", func() {
 
 		BeforeEach(func() {
 			By("creating the ConfigMap with skill contents")
-			skillDir := filepath.Join("..", "..", "example-skills", "kueue-jobs-stuck")
+			skillDir := filepath.Join("..", "..", "example-skills", "monitor-pods-skill", "skill-files")
 			cmData := map[string]string{}
 			for key, relPath := range map[string]string{
-				"kueue-jobs-stuck___SKILL.md":                                 "SKILL.md",
-				"kueue-jobs-stuck___assets___kueue-advisory-tool-failed.json": filepath.Join("assets", "kueue-advisory-tool-failed.json"),
-				"kueue-jobs-stuck___assets___kueue-advisory-jobs-stuck.json":  filepath.Join("assets", "kueue-advisory-jobs-stuck.json"),
-				"kueue-jobs-stuck___scripts___get-jobs-stuck.sh":              filepath.Join("scripts", "get-jobs-stuck.sh"),
+				"monitor-pods-skill___skill-files___SKILL.md":                    "SKILL.md",
+				"monitor-pods-skill___skill-files___assets___pods-stuck.json":    filepath.Join("assets", "pods-stuck.json"),
+				"monitor-pods-skill___skill-files___scripts___get-stuck-pods.sh": filepath.Join("scripts", "get-stuck-pods.sh"),
+				"monitor-pods-skill___skill-files___references___REFERENCE.md":   filepath.Join("references", "REFERENCE.md"),
 			} {
 				data, err := os.ReadFile(filepath.Join(skillDir, relPath))
 				Expect(err).NotTo(HaveOccurred())

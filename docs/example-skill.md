@@ -216,6 +216,24 @@ rules:
   - delete
 ```
 
+For the role binding, the service account must be that of the deployed Khieron controller.
+
+```bash
+kubectl -n khieron-ns get serviceaccounts
+
+NAME                 AGE
+default              4d
+khieron-test-chart   16m
+```
+
+This needs to be changed in `values.yaml` to reflect where you deployed the Khieron controller:
+
+```yaml
+serviceAccount:
+  name: khieron-controller-manager
+  namespace: khieron-system
+```
+
 
 ## Bundling it all together
 
