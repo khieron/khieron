@@ -4,8 +4,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: example.com/khieron
-  newTag: v0.0.1
+  newName: quay.io/aicatalyst/khieron
+  newTag: v0.0.5
 
 generatorOptions:
   disableNameSuffixHash: true

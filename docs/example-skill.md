@@ -259,6 +259,12 @@ To see the Skill:
 kubectl -n my-namespace describe skill
 ```
 
+To create a broken deployment
+
+```bash
+kubectl -n my-namespace apply -f example-skills/broken-deployment.yaml
+```
+
 To see any Advisories:
 
 ```bash
