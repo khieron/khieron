@@ -49,6 +49,10 @@ patches:
 - path: manager_instruction_patch.yaml
   target:
     kind: Deployment
+# [MODEL] Set the Gemini model name for the agent.
+- path: manager_model_patch.yaml
+  target:
+    kind: Deployment
 
 # Uncomment the patches line if you enable Metrics and CertManager
 # [METRICS-WITH-CERTS] To enable metrics protected with certManager, uncomment the following line.

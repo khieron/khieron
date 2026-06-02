@@ -295,7 +295,7 @@ func newRunScriptTool(skillDir string) (tool.Tool, error) {
 		}
 
 		fullPath := filepath.Join(skillDir, cleanPath)
-		log.Info("run_script executing", "fullPath", fullPath)
+		log.Info("run_script executing", "fullPath", fullPath, "args", args.Args)
 		cmdArgs := append([]string{fullPath}, args.Args...)
 		cmd := exec.CommandContext(ctx, "bash", cmdArgs...)
 

@@ -54,6 +54,10 @@ spec:
           }}
         securityContext: {{- toYaml .Values.controllerManager.manager.containerSecurityContext
           | nindent 10 }}
+        volumeMounts:
+        - mountPath: /etc/khieron
+          name: agent-instruction
+          readOnly: true
       nodeSelector: {{- toYaml .Values.controllerManager.nodeSelector | nindent 8 }}
       securityContext: {{- toYaml .Values.controllerManager.podSecurityContext | nindent
         8 }}
@@ -62,3 +66,7 @@ spec:
       tolerations: {{- toYaml .Values.controllerManager.tolerations | nindent 8 }}
       topologySpreadConstraints: {{- toYaml .Values.controllerManager.topologySpreadConstraints
         | nindent 8 }}
+      volumes:
+      - configMap:
+          name: {{ include "chart.fullname" . }}-agent-instruction
+        name: agent-instruction

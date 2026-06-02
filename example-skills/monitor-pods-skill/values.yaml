@@ -3,4 +3,7 @@ skill:
   name: monitor-pods-skill
   intervalMinute: 5
   enableAgent: true
+serviceAccount:
+  name: khieron-test-chart
+  namespace: khieron-ns
 

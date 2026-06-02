@@ -17,7 +17,7 @@ cd <my folder>
 helm create monitor-pods-skill --starter $KHIERON_LOCATION/skill-helm-chart-template
 ```
 
-Change the name of the Skill in `values.yaml` e.g.:
+Change the name of the Skill in `values.yaml` to match the name given above e.g.:
 
 ```bash
 sed -i 's/my-skill/monitor-pods-skill/g' monitor-pods-skill/values.yaml
@@ -92,7 +92,7 @@ You are an autonomous SRE Agent for monitoring Kubernetes pods. You MUST execute
 
 ## Step 1: List the pods in the current namespace and see if any are not running
 
-Use the run_script tool to execute `scripts/get-pods-stuck.sh`. This script retrieves a
+Use the run_script tool to execute `scripts/get-stuck-pods.sh`. This script retrieves a
 list of pods that have been created through Deployments or Jobs or otherwise, but yet cannot run for a variety
 of reasons.
 
@@ -126,7 +126,9 @@ Scripts are currently limited to Bash scripts. We refer to these as external too
 
 In `SKILL.md` you refer to these scripts by file name including the path starting with `skills/`.
 
-`assets/get_stuck_pods.sh`:
+> Make sure the name you give the file below matches the name mentioned in `SKILL.md`. 
+
+`assets/get-stuck-pods.sh`:
 ```bash
 #!/bin/bash
 
@@ -136,54 +138,33 @@ TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 CACERT="--cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 API="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
 
-# Get namespaces labelled with kueue.openshift.io/managed=true
-NAMESPACES=$(curl -sS -k -f ${CACERT} \
+if [ -z "$1" ]; then
+  echo "Usage: $0 <namespace>"
+  exit 1
+fi
+
+NS="$1"
+
+if ! PODS=$(curl -sS -k -f ${CACERT} \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Accept: application/json" \
-  -G --data-urlencode 'labelSelector=kueue.openshift.io/managed=true' \
-  "${API}/api/v1/namespaces")
+  "${API}/api/v1/namespaces/${NS}/pods?fieldSelector=status.phase%21%3DRunning%2Cstatus.phase%21%3DSucceeded"); then
 
-if [ $? -ne 0 ]; then
-  echo "Failed to query namespaces: ${NAMESPACES}"
-  exit -1
+  echo "Failed to query pods in namespace ${NS}: ${PODS}"
+  exit 1
 fi
 
-NS_LIST=$(echo "${NAMESPACES}" | jq -r '.items[].metadata.name')
+NS_RESULTS=$(echo "${PODS}" | jq '[.items[] | {
+  name: .metadata.name,
+  namespace: .metadata.namespace,
+  phase: .status.phase,
+  reason: (.status.reason // ""),
+  message: (.status.message // ""),
+  conditions: [.status.conditions[]? | {type: .type, status: .status, reason: (.reason // ""), message: (.message // "")}],
+  createdAt: .metadata.creationTimestamp
+}]')
 
-if [ -z "${NS_LIST}" ]; then
-  echo "[]"
-  exit 0
-fi
-
-# Collect non-running pods from each managed namespace
-RESULTS="[]"
-for NS in ${NS_LIST}; do
-  PODS=$(curl -sS -k -f ${CACERT} \
-    -H "Authorization: Bearer ${TOKEN}" \
-    -H "Accept: application/json" \
-    "${API}/api/v1/namespaces/${NS}/pods?fieldSelector=status.phase%21%3DRunning%2Cstatus.phase%21%3DSucceeded")
-
-  if [ $? -ne 0 ]; then
-    echo "Failed to query pods in namespace ${NS}: ${PODS}"
-    continue
-  fi
-
-  NS_RESULTS=$(echo "${PODS}" | jq '[.items[] | {
-    name: .metadata.name,
-    namespace: .metadata.namespace,
-    job: ([.metadata.ownerReferences[]? | select(.kind == "Job") | .name][0] // ""),
-    workload: (.metadata.annotations["kueue.x-k8s.io/workload"] // ""),
-    phase: .status.phase,
-    reason: (.status.reason // ""),
-    message: (.status.message // ""),
-    conditions: [.status.conditions[]? | {type: .type, status: .status, reason: (.reason // ""), message: (.message // "")}],
-    createdAt: .metadata.creationTimestamp
-  }]')
-
-  RESULTS=$(echo "${RESULTS}" "${NS_RESULTS}" | jq -s '.[0] + .[1]')
-done
-
-echo "${RESULTS}"
+echo "$NS_RESULTS"
 
 exit 0
 ```
@@ -200,10 +181,10 @@ Json files that act as templates for the Advisory should be placed in the `asset
 
 Replace the template contents with:
 
-`monitor-pods-skill/skill-files/advisory-template.json`:
+`monitor-pods-skill/skill-files/pods-stuck.json`:
 ```json
 {
-    "name": "pod-stuck",
+    "name": "pods-stuck",
     "advisory": "Pod {pod} in namepsace {namespace} has been created but is stuck",
     "explaination": "{explaination}",
     "proposal": "Terminate the pod {pod} in namespace {namespace}"
@@ -243,5 +224,33 @@ That's it! The `skill.yaml` and `configmap.yaml` to not need to be edited.
 To see the manifest that will be produced use `helm template` command
 
 ```bash
-helm -n my-namespace template --release-name foobar monitor-pods-skill
+helm -n my-namespace template --release-name foobar ./monitor-pods-skill
 ```
+
+To deploy, use `helm install` command:
+
+```bash
+helm -n my-namespace install --create-namespace monitor-pods-skill ./monitor-pods-skill
+```
+
+## Monitor the deployment
+
+To see the Skill:
+
+```bash
+kubectl -n my-namespace describe skill
+```
+
+To see any Advisories:
+
+```bash
+kubectl -n my-namespace describe advisory
+```
+
+To approve an Advisory:
+
+```bash
+$ADVISORY_NAME=<advisory name>
+kubectl -n my-namespace patch advisory $ADVISORY_NAME --type merge -p '{"spec":{"approver":"admin"}}'
+```
+

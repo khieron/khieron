@@ -10,5 +10,5 @@ roleRef:
   name: {{ include "skill.name" . }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "skill.name" . }}
-  namespace: {{ .Release.Namespace }}
+  name: {{ .Values.serviceAccount.name }}
+  namespace: {{ .Values.serviceAccount.namespace }}

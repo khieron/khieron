@@ -265,7 +265,11 @@ func (l *AgentRunnerLoop) runSkillAgentIfDue(ctx context.Context, entry *AgentEn
 		return fmt.Errorf("failed to create session: %v", err)
 	}
 
-	userMsg := genai.NewContentFromText("Investigate this system", genai.RoleUser)
+	userMsg := genai.NewContentFromText(
+		fmt.Sprintf("Investigate this system. You are running in namespace %q for skill %q.",
+			entry.CRKey.Namespace, entry.CRKey.Name),
+		genai.RoleUser,
+	)
 	events := entry.Runner.Run(ctx, "controller", createResp.Session.ID(), userMsg, agent.RunConfig{})
 
 	result, err := processAgentEvents(ctx, events, entry.CRKey.String())
