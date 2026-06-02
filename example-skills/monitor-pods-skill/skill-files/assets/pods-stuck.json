@@ -1,6 +1,6 @@
 {
     "name": "pods-stuck",
-    "advisory": "Pod {pod} in namepsace {namespace} has been created but is stuck",
+    "advisory": "Pod {pod} in namepsace {namespace} has been created but is stuck. Is is owned by {ownerReference}",
     "explaination": "{explaination}",
-    "proposal": "Terminate the pod {pod} in namespace {namespace}"
+    "proposal": "Terminate the pod (pod} in namespace {namespace} using the tool 'scripts/delete-owner.sh'"
 }

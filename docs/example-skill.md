@@ -3,6 +3,8 @@
 To demonstrate the capabilities of Khieron, this page shows how to create a new Skill CR and
 how to put it in to operation.
 
+> All the following code is in [example-skills/monitor-pods-skill](../example-skills/monitor-pods-skill/).
+
 ## Start a new Skill with **helm create**
 
 To start a new Skill use the helm chart template in [skill-helm-chart-template](../skill-helm-chart-template/)
@@ -259,7 +261,7 @@ To see the Skill:
 kubectl -n my-namespace describe skill
 ```
 
-To create a broken deployment
+Create a broken deployment of a pod to see the skill analyze it and create an Advisory:
 
 ```bash
 kubectl -n my-namespace apply -f example-skills/broken-deployment.yaml
@@ -270,6 +272,53 @@ To see any Advisories:
 ```bash
 kubectl -n my-namespace describe advisory
 ```
+
+> If you do not see an advisory yet, you might want to force the agent to run now:
+> 
+> ```bash
+> kubectl -n my-namespace annotate skill monitor-pods-skill khieron.io/run-requested=$(date -u +%FT%TZ) --overwrite
+> ```
+
+A sample advistory based on the broken-deployment above, might read like:
+
+```yaml
+apiVersion: v1
+items:
+- apiVersion: agency.khieron.io/v1alpha1
+  kind: Advisory
+  metadata:
+    creationTimestamp: "2026-06-02T19:38:46Z"
+    generateName: monitor-pods-skill-monitor-pods-skill-broken-deployment-7f4d9c5f46-gcrmf-image-pull-backoff-
+    generation: 1
+    labels:
+      khieron.io/job-name: broken-deployment-7f4d9c5f46-gcrmf
+      khieron.io/job-namespace: example-skills
+    name: monitor-pods-skill-monitor-pods-skill-broken-deployment-7fjk8m6
+    namespace: example-skills
+    ownerReferences:
+    - apiVersion: agency.khieron.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Skill
+      name: monitor-pods-skill
+      uid: da5e79ad-f989-4e24-8e82-4dd1adc24586
+    resourceVersion: "15181"
+    uid: cd9d29da-cd72-4a9b-af90-3fba6dc8536a
+  spec: {}
+  status:
+    advisory: Pod broken-deployment-7f4d9c5f46-gcrmf in namespace example-skills has
+      been created but is stuck. It is owned by broken-deployment-7f4d9c5f46-gcrmf
+    advisoryupdatedtime: "2026-06-02T19:38:46Z"
+    explanation: The pod 'broken-deployment-7f4d9c5f46-gcrmf' in namespace 'example-skills'
+      is stuck in 'Pending' phase because its container 'web-container' failed to
+      pull the image 'nginx:this-tag-does-not-exist'. The image was not found.
+    proposal: Terminate the pod 'broken-deployment-7f4d9c5f46-gcrmf' in namespace
+      'example-skills' using the tool 'scripts/delete-owner.sh'
+kind: List
+metadata:
+  resourceVersion: ""
+```
+
 
 To approve an Advisory:
 

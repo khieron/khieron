@@ -9,8 +9,22 @@ rules:
   - ""
   resources:
   - pods
+  - events
   verbs:
   - get
   - list
-  - watch
   - delete
+  - patch
+  - update
+- apiGroups:
+  - "apps"
+  resources:
+  - replicasets
+  - deployments
+  verbs:
+  - get
+  - list
+  - delete
+  - patch
+  - update
+

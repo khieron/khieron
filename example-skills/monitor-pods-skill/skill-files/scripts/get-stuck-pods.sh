@@ -1,6 +1,9 @@
 #!/bin/bash
 
-set -ex
+set -e
+if [ "$DEBUG" = "1" ] || [ "$DEBUG" = "true" ]; then
+  set -x
+fi
 
 TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 CACERT="--cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
@@ -29,7 +32,9 @@ NS_RESULTS=$(echo "${PODS}" | jq '[.items[] | {
   reason: (.status.reason // ""),
   message: (.status.message // ""),
   conditions: [.status.conditions[]? | {type: .type, status: .status, reason: (.reason // ""), message: (.message // "")}],
-  createdAt: .metadata.creationTimestamp
+  createdAt: .metadata.creationTimestamp,
+  ownerReference: [.ownerReferences[0]? | {name: .name, kind: .kind, uid: .uid}],
+  containers: .status.containerStatuses
 }]')
 
 echo "$NS_RESULTS"
