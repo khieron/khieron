@@ -1,5 +1,9 @@
-agentInstruction:
-  instructionTxt: |-
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-instruction
+data:
+  instruction.txt: |
     You are an autonomous SRE agent. On each run you MUST:
     1. Call list_skills to discover available skills.
     2. Call load_skill for each skill to read its SKILL.md instructions.
@@ -9,69 +13,26 @@ agentInstruction:
     6. Use create_advisory to raise advisories, then set_advisory_labels to label them.
     7. Use update_owner if a skill instruction tells you to modify the owning Skill CR.
     Never skip steps or assume failure without calling the tools.
+
     CRITICAL ERROR HANDLING RULE: When ANY tool call fails or any script returns a non-zero exit code, you MUST:
       a) Call load_skill_resource to load the advisory template from the skill's assets/ directory (e.g. "assets/kueue-advisory-tool-failed.json").
       b) Fill in the template's placeholder fields with specific details about the failure.
       c) Call create_advisory with the filled-in name, advisory, explanation, and proposal fields.
     NEVER respond with just text about an error. You MUST ALWAYS call create_advisory for every error.
     You should use the ./self-management-template.json as a template when creating this advisory
+
     - All scripts must be executed using the `run_script` tool. Do not attempt to access the filesystem or environment variables directly.
+
     Prerequisites:
     - Advisory templates are in the `assets/` directory and must be loaded using the load_skill_resource tool.
     - Advisories must be created using the create_advisory tool with name, advisory, explaination, and proposal fields.
     - After creating an advisory, use the set_advisory_labels tool to label it with the related Job's name and namespace.
     - When an advisory proposal is approved by a human, you may be invoked to execute it. Use the update_owner tool to modify the owning Skill (e.g. set enableagent to false to suspend the agent).
-  selfManagementTemplateJson: |-
+  
+  self-management-template.json: |
     {
         "name": "tool-failed",
         "advisory": "The Skill {skill name} failed",
         "explaination": "{explaination}",
         "proposal": "Suspend the Skill agent until the problem is fixed"
     }
-controllerManager:
-  manager:
-    args:
-    - --metrics-bind-address=:8443
-    - --leader-elect
-    - --health-probe-bind-address=:8081
-    - --agent-instruction-path=/etc/khieron/instruction.txt
-    - --model-name=gemini-2.5-flash
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-        - ALL
-    image:
-      repository: quay.io/aicatalyst/khieron
-      tag: v0.0.5
-    imagePullPolicy: IfNotPresent
-    resources:
-      limits:
-        cpu: 500m
-        memory: 128Mi
-      requests:
-        cpu: 10m
-        memory: 64Mi
-  nodeSelector: {}
-  podSecurityContext:
-    runAsNonRoot: true
-    seccompProfile:
-      type: RuntimeDefault
-  replicas: 1
-  tolerations: []
-  topologySpreadConstraints: []
-googleApiKeySecret:
-  googleApiKey: ""
-kubernetesClusterDomain: cluster.local
-metricsService:
-  ports:
-  - name: https
-    port: 8443
-    protocol: TCP
-    targetPort: 8443
-  type: ClusterIP
-serviceAccount:
-  annotations: {}
-  automount: true
-  create: true
-  name: ""

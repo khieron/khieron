@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chart.fullname" . }}-agent-instruction
+  labels:
+  {{- include "chart.labels" . | nindent 4 }}
+data:
+  instruction.txt: {{ .Values.agentInstruction.instructionTxt | toYaml | indent 1
+    }}
+  self-management-template.json: {{ .Values.agentInstruction.selfManagementTemplateJson
+    | toYaml | indent 1 }}

@@ -1,0 +1,9 @@
+---
+apiVersion: v2
+name: my-skill
+description: A Khieron skill Helm chart — copy this template and customise for your own skill.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+icon: https://raw.githubusercontent.com/khieron/khieron/main/docs/images/icon.png
+ 

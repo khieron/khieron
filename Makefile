@@ -51,6 +51,8 @@ endif
 OPERATOR_SDK_VERSION ?= v1.42.2
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
+# Namespace to deploy example skills into
+EXAMPLE_SKILLS_NAMESPACE ?= example-skills
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -155,6 +157,11 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 lint-config: golangci-lint ## Verify golangci-lint linter configuration
 	$(GOLANGCI_LINT) config verify
 
+.PHONY: trivy
+trivy: ## Run Trivy vulnerability scanner on go.mod and Dockerfile.
+	trivy fs --scanners vuln --pkg-types library go.mod
+	trivy config Dockerfile
+
 ##@ Build
 
 .PHONY: build
@@ -226,20 +233,24 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
+	echo "GOOGLE_API_KEY=$(GOOGLE_API_KEY)" > config/default/google-api-key.env
+	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f - ; \
+	status=$$? ; \
+	echo "GOOGLE_API_KEY=" > config/default/google-api-key.env ; \
+	exit $$status
 	$(MAKE) deploy-example-skills
 
 .PHONY: deploy-example-skills
-deploy-example-skills: kustomize ## Deploy example skills to the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build example-skills | $(KUBECTL) apply -f -
+deploy-example-skills: ## Deploy example skills to the K8s cluster specified in ~/.kube/config.
+	helm upgrade --install monitor-pods-skill example-skills/monitor-pods-skill -n $(EXAMPLE_SKILLS_NAMESPACE) --create-namespace
 
 .PHONY: undeploy
 undeploy: kustomize undeploy-example-skills ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: undeploy-example-skills
-undeploy-example-skills: kustomize ## Undeploy example skills from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build example-skills | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+undeploy-example-skills: ## Undeploy example skills from the K8s cluster specified in ~/.kube/config.
+	helm uninstall monitor-pods-skill -n $(EXAMPLE_SKILLS_NAMESPACE) --ignore-not-found
 
 ##@ Dependencies
 

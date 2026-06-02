@@ -7,6 +7,8 @@ Khieron[<sup>1</sup>](#why-khieron) (pronounced Kay-ron) brings Kubernetes nativ
 * **Skills** - for a flexible and dynamic way of creating single minded single task agents and
 * **Advisories**   a Human In the Loop mechanism in a familiar CRD style
 
+See [Examples Skills](#example-skills) below for a comprehensive guide to Skills.
+
 ### The lightweight advantage
 
 Commonly cited agentic frameworks for Kubernetes tend to be general purpose behemoths, capable of doing many external facing tasks, but also bringing with them several external systems that and other projects that have a combinatorial effect in increasing complexity.
@@ -14,6 +16,16 @@ Commonly cited agentic frameworks for Kubernetes tend to be general purpose behe
 If you're trying to acheieve a simple task to manage your cluster, it can feel like using a sledgehammer to crack a nut.
 
 By keeping it it simple, Khieron is not trying to give an interactive interface (like a chatbot). Instead it enables granular skills, looped on a regular cadence, with interactivity given through Accept/Reject decisions on Advisories.
+
+```mermaid
+graph TD;
+  S(Skill CR) -- creates --> G[Agent];
+  G -- monitors --> System;
+  G -- identifies --> Issue;
+  G -- raises --> A(Advisory CR);
+  U@{shape: manual-input, label: User} -- approves --> A;
+  A -- resolves --> Issue;
+```
 
 ### Simplicity throughout
 
@@ -52,10 +64,26 @@ The fact that they are CRDs allow them to have their own control loop intercting
 
 To protect from the Agent calling the Model too many times, the agent runs every 5 minutes (configurable). Additionally if the agent finds that a tool is returning a failure that needs attention the Agent will pause the Skill.
 
+### Secure by design
+
+Khieron controller runs in a secure locked down pod based off UBI 9 minimal where tools run in non-root accounts.
+
+Skills can only access the Kubernetes API granted to them through specific Service Accounts.
+
+By not having a chatbot interface, the risks of prompt injection attacks commonly associated with agents, is removed.
+
+On Openshift, the deployment uses an Egress Firewall to prevent tools from accessing network resources other than the model API (Gemini) and internal cluster based APIs, thereby reducing the risk of exfiltration by rogue scripts.
+
+### Observable and measurable
+
+Through ADK-go the agent can be integrated to OpenTelemetry (future).
+
 ### Non goals
 
-The Project does not intend to be a comprehensive Agentic framework and is not designed to create a
+Khieron does not intend to be a comprehensive Agentic framework and is not designed to create a
 RAG system.
+
+It does not provide a chat interface.
 
 ### Why Khieron
 
@@ -72,20 +100,10 @@ Install through Helm with a Google API Key:
 ```bash
 NAMESPACE=khieron-system
 GOOGLE_API_KEY=<your key from Google>
-helm -n khieron-system install --create-namespace khieron ./dist/chart/ --set googleApiKey=$GOOGLE_API_KEY
+helm -n khieron-system install --create-namespace khieron ./dist/chart/ -f dist/chart/values.yaml --set googleApiKeySecret.googleApiKey=$GOOGLE_API_KEY
 ```
 
-Then install sample skills:
-
-```bash
-kustomize build example-skills | kubectl apply -n $NAMESPACE -f - 
-```
-
-To delete them use:
-
-```bash
-kustomize build example-skills | kubectl delete --ignore-not-found=true -n $NAMESPACE -f -
-```
+> To install on Openshift use `values-openshift.yaml` instead, to activate the Egress Firewall.
 
 ## Operation
 
@@ -144,6 +162,13 @@ $NAMESPACE=<khieron namespace>
 $SKILL=<skill name>
 kubectl -n $NAMESPACE patch skill $SKILL --type merge -p '{"spec":{"enableagent":false}}'
 ```
+
+## Example Skills
+
+See [the stalled pod skill](./docs/example-skill.md) for a description on how to build and operator a example skill.
+
+See the [Skill developer guide](./docs/skill-developer-guide.md) to understand best practice in writing skills
+for Khieron.
 
 ## Developer Getting Started
 

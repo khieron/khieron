@@ -1,0 +1,12 @@
+---
+apiVersion: agency.khieron.io/v1alpha1
+kind: Skill
+metadata:
+  name: {{ include "skill.name" . }}
+  labels:
+    {{- include "skill.labels" . | nindent 4 }}
+spec:
+  skillconfigref:
+    name: {{ include "skill.name" . | quote }}
+  intervalminute: {{ .Values.skill.intervalMinute }}
+  enableagent: {{ .Values.skill.enableAgent }}

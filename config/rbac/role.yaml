@@ -9,7 +9,6 @@ rules:
   resources:
   - configmaps
   - namespaces
-  - pods
   verbs:
   - get
   - list
@@ -43,11 +42,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - batch
-  resources:
-  - jobs
-  verbs:
-  - get
-  - list
-  - watch

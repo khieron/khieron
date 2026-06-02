@@ -1,0 +1,16 @@
+# This patch mounts the agent-instruction ConfigMap and adds the flag to use it.
+- op: add
+  path: /spec/template/spec/volumes
+  value:
+    - name: agent-instruction
+      configMap:
+        name: agent-instruction
+- op: add
+  path: /spec/template/spec/containers/0/volumeMounts
+  value:
+    - name: agent-instruction
+      mountPath: /etc/khieron
+      readOnly: true
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --agent-instruction-path=/etc/khieron/instruction.txt

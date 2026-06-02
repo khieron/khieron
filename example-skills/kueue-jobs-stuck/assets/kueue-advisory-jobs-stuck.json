@@ -1,6 +1,0 @@
-{
-    "name": "job-stuck",
-    "advisory": "Job {job} in namepsace {namespace} has been admitted by the Kueue controller but is stuck",
-    "explaination": "{explaination}",
-    "proposal": "Terminate the job {job} in namespace {namespace}"
-}
