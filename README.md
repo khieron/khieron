@@ -27,11 +27,17 @@ graph TD;
   A -- resolves --> Issue;
 ```
 
-### Simplicity throughout
+### Minimalism throughout
 
-Khieron uses the Agent Development Tookit (Go version) bundled inside the controller, with no bloated Python dependencies (greatly reducing the size of the pod and the startup time), making it suitable for Edge use cases.
+Khieron uses the [Agent Development Tookit (Go version)](https://github.com/google/adk-go) bundled inside the controller, with no bloated Python dependencies (greatly reducing the size of the pod and the startup time), making it suitable for Edge use cases.
 
-There are no child containers to manage. No LiteLLM. No LangChain/LangGrpah.
+There are no child containers to manage. No LiteLLM. No LangChain/LangGrpah. The Docker image is less than 1/10th the size of a comparable Python deployment.
+
+```bash
+docker images quay.io/aicatalyst/khieron
+IMAGE                               ID             DISK USAGE   CONTENT SIZE   EXTRA
+quay.io/aicatalyst/khieron:v0.0.3   87887f780280        265MB         73.9MB
+```
 
 ### Flexibility
 

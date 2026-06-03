@@ -22,9 +22,10 @@ or Jobs or otherwise, but yet cannot run for a variety of reasons.
 For each of these stuck pods examine the cause and if you think the problem is not just temporary and that it will not fix itself, raise an Advisory.
 
 Use the `load_skill_resource tool` to load the appropriate Advisory template from `assets/`:
-- `assets/pods-stuck.json` -- when an a stuck job is found.
+- Use `assets/pods-stuck.json` template if the pod image is not found.
 
-Fill in the template's placeholder fields (e.g. `{skill name}`, `{pod name}`, `{namespace}`, `{explaination}`, `{proposal}`) with specific details about the issue you discovered. The `proposal` field should describe a concrete action to resolve the issue.
+Copy the template fields over to the advisory, replacing placeholder fields like `{skill name}`, `{pod}`,
+`{namespace}`, `{explaination}`, `{proposal}` with specific details about the issue you discovered. The `proposal` field should describe a concrete action to resolve the issue that the Agent can take.
 
 Then use the `create_advisory` internal tool with the filled-in fields to create the Advisory CR.
 
