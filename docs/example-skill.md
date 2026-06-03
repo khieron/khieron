@@ -348,6 +348,13 @@ serviceAccount:
   namespace: khieron-system
 ```
 
+## Evaluating the Skill
+
+It can be useful to evaluate your Skill with a linting tool like [skilleval](https://github.com/natifridman/skilleval).
+
+```bash
+npx skilleval check ./example-skills/monitor-pods-skill/skill-files/
+```
 
 ## Bundling it all together
 
