@@ -3,7 +3,7 @@
 To demonstrate the capabilities of Khieron, this page shows how to create a new Skill CR and
 how to put it in to operation.
 
-> All the following code is in [example-skills/monitor-pods-skill](../example-skills/monitor-pods-skill/).
+> All the following code is in [example-skills/monitor-pods-skill](../example-skills/monitor-pods-skill/). Just jump ahead to [Bundling it all together](#bundling-it-all-together) to see the effect.
 
 ## Start a new Skill with **helm create**
 
@@ -90,22 +90,23 @@ compatibility: Used by khieron operator. Runs on a Kubernetes cluster.
 
 # Kubernetes Pod Monitor Agent
 
-You are an autonomous SRE Agent for monitoring Kubernetes pods. You MUST execute all steps below using the available tools. Do NOT ask for confirmation, environment details, or user input. All required information is available through the provided scripts. If a script fails, report the error and move to the next step. 
+You are an autonomous SRE Agent for monitoring Kubernetes pods. You MUST execute all steps below using the available tools. Do NOT ask for confirmation, environment details, or user input. All required information is available through the provided scripts. If a script fails, report the error and move to the next step.
 
 ## Step 1: List the pods in the current namespace and see if any are not running
 
-Use the run_script tool to execute `scripts/get-stuck-pods.sh`. This script retrieves a
-list of pods that have been created through Deployments or Jobs or otherwise, but yet cannot run for a variety
-of reasons.
+Use the run_script tool to execute `scripts/get-stuck-pods.sh`, with the `{namespace}` that the Skill is
+deployed in to as an argument. This script retrieves a list of pods that have been created through Deployments
+or Jobs or otherwise, but yet cannot run for a variety of reasons.
 
 ## Step 2: Raise an Advisory
 
 For each of these stuck pods examine the cause and if you think the problem is not just temporary and that it will not fix itself, raise an Advisory.
 
 Use the `load_skill_resource tool` to load the appropriate Advisory template from `assets/`:
-- `assets/pods-stuck.json` -- when an a stuck job is found.
+- Use `assets/pods-stuck.json` template if the pod image is not found.
 
-Fill in the template's placeholder fields (e.g. `{skill name}`, `{pod name}`, `{namespace}`, `{explaination}`, `{proposal}`) with specific details about the issue you discovered. The `proposal` field should describe a concrete action to resolve the issue.
+Copy the template fields over to the advisory, replacing placeholder fields like `{skill name}`, `{pod}`,
+`{namespace}`, `{explaination}`, `{proposal}` with specific details about the issue you discovered. The `proposal` field should describe a concrete action to resolve the issue that the Agent can take.
 
 Then use the `create_advisory` internal tool with the filled-in fields to create the Advisory CR.
 
@@ -116,7 +117,6 @@ After creating each Advisory, use the `set_advisory_labels` internal tool to lab
 ## Step 4: Repeat for other pods.
 
 Steps 2-3 should be repeated for each stuck pod.
-
 ```
 
 The system prompt that expains all the fixed parts of the Skill and Agent CRs is given in the Agent initial prompt
@@ -134,7 +134,10 @@ In `SKILL.md` you refer to these scripts by file name including the path startin
 ```bash
 #!/bin/bash
 
-set -ex
+set -e
+if [ "$DEBUG" = "1" ] || [ "$DEBUG" = "true" ]; then
+  set -x
+fi
 
 TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 CACERT="--cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
@@ -163,7 +166,58 @@ NS_RESULTS=$(echo "${PODS}" | jq '[.items[] | {
   reason: (.status.reason // ""),
   message: (.status.message // ""),
   conditions: [.status.conditions[]? | {type: .type, status: .status, reason: (.reason // ""), message: (.message // "")}],
-  createdAt: .metadata.creationTimestamp
+  createdAt: .metadata.creationTimestamp,
+  ownerReference: [.ownerReferences[0]? | {name: .name, kind: .kind, uid: .uid}],
+  containers: .status.containerStatuses
+}]')
+
+echo "$NS_RESULTS"
+
+exit 0
+```
+
+
+Add another script to handle deletion of the owner:
+
+`delete-owner.sh`:
+```bash
+#!/bin/bash
+
+set -e
+if [ "$DEBUG" = "1" ] || [ "$DEBUG" = "true" ]; then
+  set -x
+fi
+
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+CACERT="--cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+API="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 <namespace>"
+  exit 1
+fi
+
+NS="$1"
+
+if ! PODS=$(curl -sS -k -f ${CACERT} \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Accept: application/json" \
+  "${API}/api/v1/namespaces/${NS}/pods?fieldSelector=status.phase%21%3DRunning%2Cstatus.phase%21%3DSucceeded"); then
+
+  echo "Failed to query pods in namespace ${NS}: ${PODS}"
+  exit 1
+fi
+
+NS_RESULTS=$(echo "${PODS}" | jq '[.items[] | {
+  name: .metadata.name,
+  namespace: .metadata.namespace,
+  phase: .status.phase,
+  reason: (.status.reason // ""),
+  message: (.status.message // ""),
+  conditions: [.status.conditions[]? | {type: .type, status: .status, reason: (.reason // ""), message: (.message // "")}],
+  createdAt: .metadata.creationTimestamp,
+  ownerReference: [.ownerReferences[0]? | {name: .name, kind: .kind, uid: .uid}],
+  containers: .status.containerStatuses
 }]')
 
 echo "$NS_RESULTS"
@@ -187,11 +241,10 @@ Replace the template contents with:
 ```json
 {
     "name": "pods-stuck",
-    "advisory": "Pod {pod} in namepsace {namespace} has been created but is stuck",
+    "advisory": "Pod {pod} in namepsace {namespace} has been created but is stuck. Is is owned by {ownerReference}",
     "explaination": "{explaination}",
-    "proposal": "Terminate the pod {pod} in namespace {namespace}"
+    "proposal": "Terminate the pod (pod} in namespace {namespace} using the tool 'scripts/delete-owner.sh' passing {namespace} and {pod} as arguments"
 }
-
 ```
 
 ## Defining the manifest and permissions
@@ -214,18 +267,38 @@ rules:
   verbs:
   - get
   - list
-  - watch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - create
+- apiGroups:
+  - "apps"
+  resources:
+  - replicasets
+  - deployments
+  verbs:
+  - get
+  - list
   - delete
 ```
 
-For the role binding, the service account must be that of the deployed Khieron controller.
+These allow a fine grained control over the permissions of the Skill in the particular namespace the Skill
+runs in. The permissions should correspond to what the scripts actually do. If you get a 403 error in the
+script, come back and examine these permissions.
+
+For the role binding, the service account **must** be that of the deployed Khieron controller.
 
 ```bash
-kubectl -n khieron-ns get serviceaccounts
+kubectl -n khieron-system get serviceaccounts
 
-NAME                 AGE
-default              4d
-khieron-test-chart   16m
+NAME                         AGE
+default                       4d
+khieron-controller-manager   16m
 ```
 
 This needs to be changed in `values.yaml` to reflect where you deployed the Khieron controller:
@@ -312,8 +385,7 @@ items:
     explanation: The pod 'broken-deployment-7f4d9c5f46-gcrmf' in namespace 'example-skills'
       is stuck in 'Pending' phase because its container 'web-container' failed to
       pull the image 'nginx:this-tag-does-not-exist'. The image was not found.
-    proposal: Terminate the pod 'broken-deployment-7f4d9c5f46-gcrmf' in namespace
-      'example-skills' using the tool 'scripts/delete-owner.sh'
+    proposal: Terminate the pod broken-deployment-7f4d9c5f46-9bcxh in namespace example-skills using the tool 'scripts/delete-owner.sh' passing example-skills and broken-deployment-7f4d9c5f46-9bcxh as arguments
 kind: List
 metadata:
   resourceVersion: ""
@@ -327,3 +399,22 @@ $ADVISORY_NAME=<advisory name>
 kubectl -n my-namespace patch advisory $ADVISORY_NAME --type merge -p '{"spec":{"approver":"admin"}}'
 ```
 
+In this example case, approving the Advisory executes the Proposal which calls the `delete-owner.sh` script.
+It recursively finds the owner of the Pod - first the parent ReplicaSet and then the grand-parent the
+Deployment and deletes it.
+
+The advisory events show the resolution:
+
+```
+Events:                                                                                                          
+  Type    Reason            Age   From                 Message                                                                                                 
+  ----    ------            ----  ----                 -------                                                                                                 
+  Normal  Approved          22m   advisory-controller  Advisory approved by sean
+  Normal  ProposalExecuted  22m   advisory-controller  Proposal executed: Terminate the pod
+                                                       broken-deployment-7f4d9c5f46-9bcxh in namespace
+                                                       example-skills using the tool 'scripts/delete-owner.sh'
+                                                       passing example-skills and
+                                                       broken-deployment-7f4d9c5f46-9bcxh as arguments
+```
+
+The Deployemnt is deleted. The Advisory can be deleted at this stage.

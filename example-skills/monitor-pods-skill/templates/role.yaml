@@ -9,13 +9,18 @@ rules:
   - ""
   resources:
   - pods
-  - events
   verbs:
   - get
   - list
   - delete
-  - patch
-  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - create
 - apiGroups:
   - "apps"
   resources:
@@ -25,6 +30,4 @@ rules:
   - get
   - list
   - delete
-  - patch
-  - update
 
