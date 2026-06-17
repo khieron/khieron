@@ -13,6 +13,16 @@ spec:
   - to:
       cidrSelector: {{ .Values.egressFirewall.clusterCIDR }}
     type: Allow
+  {{- if .Values.egressFirewall.serviceCIDR }}
+  - to:
+      cidrSelector: {{ .Values.egressFirewall.serviceCIDR }}
+    type: Allow
+  {{- end }}
+  {{- if .Values.egressFirewall.nodeNetworkCIDR }}
+  - to:
+      cidrSelector: {{ .Values.egressFirewall.nodeNetworkCIDR }}
+    type: Allow
+  {{- end }}
   - to:
       cidrSelector: 0.0.0.0/0
     type: Deny
