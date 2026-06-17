@@ -3,6 +3,7 @@ kind: ClusterRole
 metadata:
   name: {{ include "chart.fullname" . }}-advisory-admin-role
   labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
   {{- include "chart.labels" . | nindent 4 }}
 rules:
 - apiGroups:

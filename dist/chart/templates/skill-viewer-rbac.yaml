@@ -3,6 +3,7 @@ kind: ClusterRole
 metadata:
   name: {{ include "chart.fullname" . }}-skill-viewer-role
   labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
   {{- include "chart.labels" . | nindent 4 }}
 rules:
 - apiGroups:

@@ -383,8 +383,10 @@ kubectl -n my-namespace describe skill
 Create a broken deployment of a pod to see the skill analyze it and create an Advisory:
 
 ```bash
-kubectl -n my-namespace apply -f example-skills/broken-deployment.yaml
+kubectl -n my-namespace apply -f broken-deployment.yaml
 ```
+
+> This tries to pull a non existant image.
 
 To see any Advisories:
 

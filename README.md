@@ -106,12 +106,14 @@ Install through Helm with a Google API Key:
 ```bash
 NAMESPACE=khieron-system
 GOOGLE_API_KEY=<your key from Google>
-helm -n khieron-system install --create-namespace khieron ./dist/chart/ -f dist/chart/values.yaml --set googleApiKeySecret.googleApiKey=$GOOGLE_API_KEY
+helm -n $NAMESPACE install --create-namespace khieron ./dist/chart/ -f dist/chart/values.yaml --set googleApiKeySecret.googleApiKey=$GOOGLE_API_KEY
 ```
 
 > To install on Openshift use `values-openshift.yaml` instead, to activate the Egress Firewall.
 
 ## Operation
+
+Install a Skill through a Helm Chart. See the [example skill](./docs/example-skill.md).
 
 ### Force a Skill to run now
 

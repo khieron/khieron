@@ -4,6 +4,6 @@ skill:
   intervalMinute: 5
   enableAgent: true
 serviceAccount:
-  name: khieron-controller-manager
+  name: khieron-chart
   namespace: khieron-system
 
