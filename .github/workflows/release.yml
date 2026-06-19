@@ -58,6 +58,16 @@ jobs:
           tags: |
             ghcr.io/khieron/khieron:${{ env.RELEASE_VERSION }}
             ghcr.io/khieron/khieron:latest
+          labels: |
+            org.opencontainers.image.title=khieron
+            org.opencontainers.image.description=Lightweight Kubernetes-native agentic operator
+            org.opencontainers.image.version=${{ env.RELEASE_VERSION }}
+            org.opencontainers.image.source=https://github.com/khieron/khieron
+            org.opencontainers.image.url=https://github.com/khieron/khieron
+            org.opencontainers.image.vendor=Khieron
+            org.opencontainers.image.licenses=Apache-2.0
+            org.opencontainers.image.authors=scondon@redhat.com
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
 
   helm-release:
     name: Package & Push Helm Chart
