@@ -106,7 +106,7 @@ Install through Helm with a Google API Key:
 ```bash
 NAMESPACE=khieron-system
 GOOGLE_API_KEY=<your key from Google>
-helm -n $NAMESPACE install --create-namespace khieron ./dist/chart/ -f dist/chart/values.yaml --set googleApiKeySecret.googleApiKey=$GOOGLE_API_KEY
+helm -n $NAMESPACE install --create-namespace khieron ./dist/khieron/ -f dist/khieron/values.yaml --set googleApiKeySecret.googleApiKey=$GOOGLE_API_KEY
 ```
 
 > To install on Openshift use `values-openshift.yaml` instead, to activate the Egress Firewall.
