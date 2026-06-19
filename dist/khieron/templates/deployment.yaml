@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "chart.fullname" . }}-controller-manager
+  name: {{ include "khieron.fullname" . }}-controller-manager
   labels:
     control-plane: controller-manager
-  {{- include "chart.labels" . | nindent 4 }}
+  {{- include "khieron.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.controllerManager.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: khieron
       control-plane: controller-manager
-    {{- include "chart.selectorLabels" . | nindent 6 }}
+    {{- include "khieron.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
         app.kubernetes.io/name: khieron
         control-plane: controller-manager
-      {{- include "chart.selectorLabels" . | nindent 8 }}
+      {{- include "khieron.selectorLabels" . | nindent 8 }}
       annotations:
         kubectl.kubernetes.io/default-container: manager
     spec:
@@ -30,7 +30,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: GOOGLE_API_KEY
-              name: {{ include "chart.fullname" . }}-google-api-key-secret
+              name: {{ include "khieron.fullname" . }}-google-api-key-secret
               optional: true
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
@@ -61,12 +61,12 @@ spec:
       nodeSelector: {{- toYaml .Values.controllerManager.nodeSelector | nindent 8 }}
       securityContext: {{- toYaml .Values.controllerManager.podSecurityContext | nindent
         8 }}
-      serviceAccountName: {{ include "chart.serviceAccountName" . }}
+      serviceAccountName: {{ include "khieron.serviceAccountName" . }}
       terminationGracePeriodSeconds: 10
       tolerations: {{- toYaml .Values.controllerManager.tolerations | nindent 8 }}
       topologySpreadConstraints: {{- toYaml .Values.controllerManager.topologySpreadConstraints
         | nindent 8 }}
       volumes:
       - configMap:
-          name: {{ include "chart.fullname" . }}-agent-instruction
+          name: {{ include "khieron.fullname" . }}-agent-instruction
         name: agent-instruction

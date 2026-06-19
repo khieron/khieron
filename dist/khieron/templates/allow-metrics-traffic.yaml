@@ -1,9 +1,9 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "chart.fullname" . }}-allow-metrics-traffic
+  name: {{ include "khieron.fullname" . }}-allow-metrics-traffic
   labels:
-  {{- include "chart.labels" . | nindent 4 }}
+  {{- include "khieron.labels" . | nindent 4 }}
 spec:
   ingress:
   - from:

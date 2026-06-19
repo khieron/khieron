@@ -1,18 +1,22 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "chart.fullname" . }}-advisory-viewer-role
+  name: {{ include "khieron.fullname" . }}-advisory-editor-role
   labels:
-    rbac.authorization.k8s.io/aggregate-to-view: "true"
-  {{- include "chart.labels" . | nindent 4 }}
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  {{- include "khieron.labels" . | nindent 4 }}
 rules:
 - apiGroups:
   - agency.khieron.io
   resources:
   - advisories
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - agency.khieron.io

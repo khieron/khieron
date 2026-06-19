@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "chart.fullname" . }}-agent-instruction
+  name: {{ include "khieron.fullname" . }}-agent-instruction
   labels:
-  {{- include "chart.labels" . | nindent 4 }}
+  {{- include "khieron.labels" . | nindent 4 }}
 data:
   instruction.txt: {{ .Values.agentInstruction.instructionTxt | toYaml | indent 1
     }}

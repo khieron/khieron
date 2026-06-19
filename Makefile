@@ -214,7 +214,7 @@ $(HELMIFY): $(LOCALBIN)
 
 .PHONY: helm-chart
 helm-chart: manifests generate kustomize helmify ## Generate a Helm chart from kustomize output.
-	$(KUSTOMIZE) build config/default | $(HELMIFY) dist/chart
+	$(KUSTOMIZE) build config/default | $(HELMIFY) dist/khieron khieron
 
 ##@ Deployment
 
@@ -242,7 +242,7 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 
 .PHONY: deploy-example-skills
 deploy-example-skills: ## Deploy example skills to the K8s cluster specified in ~/.kube/config.
-	helm upgrade --install monitor-pods-skill example-skills/monitor-pods-skill -n $(EXAMPLE_SKILLS_NAMESPACE) --create-namespace
+	helm upgrade --install monitor-pods-skill example-skills/monitor-pods-skill -n $(EXAMPLE_SKILLS_NAMESPACE) --create-namespace --set serviceAccount.name=khieron-controller-manager
 
 .PHONY: undeploy
 undeploy: kustomize undeploy-example-skills ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
