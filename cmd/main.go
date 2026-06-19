@@ -39,6 +39,7 @@ import (
 
 	agencyv1alpha1 "github.com/khieron/khieron/api/v1alpha1"
 	"github.com/khieron/khieron/internal/controller"
+	"github.com/khieron/khieron/internal/version"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -94,6 +95,8 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	setupLog.Info("khieron", "version", version.Version)
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will

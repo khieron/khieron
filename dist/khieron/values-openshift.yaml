@@ -42,8 +42,8 @@ controllerManager:
         drop:
         - ALL
     image:
-      repository: quay.io/aicatalyst/khieron
-      tag: v0.0.5
+      repository: ghcr.io/khieron/khieron
+      tag: ""
     imagePullPolicy: IfNotPresent
     resources:
       limits:
