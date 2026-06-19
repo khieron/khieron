@@ -214,7 +214,7 @@ $(HELMIFY): $(LOCALBIN)
 
 .PHONY: helm-chart
 helm-chart: manifests generate kustomize helmify ## Generate a Helm chart from kustomize output.
-	$(KUSTOMIZE) build config/default | $(HELMIFY) dist/chart
+	$(KUSTOMIZE) build config/default | $(HELMIFY) dist/khieron khieron
 
 ##@ Deployment
 
