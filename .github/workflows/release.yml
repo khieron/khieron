@@ -4,10 +4,18 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v0.1.0)'
+        required: true
 
 permissions:
   contents: write
   packages: write
+
+env:
+  RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
 
 jobs:
   test:
@@ -26,10 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Extract version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -50,9 +54,9 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: VERSION=${{ steps.version.outputs.VERSION }}
+          build-args: VERSION=${{ env.RELEASE_VERSION }}
           tags: |
-            ghcr.io/khieron/khieron:${{ steps.version.outputs.VERSION }}
+            ghcr.io/khieron/khieron:${{ env.RELEASE_VERSION }}
             ghcr.io/khieron/khieron:latest
 
   helm-release:
@@ -62,19 +66,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version from tag
+      - name: Resolve Helm chart version
         id: version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          TAG="${RELEASE_VERSION}"
+          VERSION="${TAG#v}"
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "TAG=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
       - name: Generate Helm chart
-        run: make helm-chart
+        run: |
+          echo "GOOGLE_API_KEY=" > config/default/google-api-key.env
+          make helm-chart
 
       - name: Stamp chart version
         run: |
@@ -94,6 +101,7 @@ jobs:
   github-release:
     name: Create GitHub Release
     needs: [build-and-push, helm-release]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -123,23 +131,23 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_VERSION }}
+          name: ${{ env.RELEASE_VERSION }}
           body: |
             ## Container Image
 
             ```
-            docker pull ghcr.io/khieron/khieron:${{ github.ref_name }}
+            docker pull ghcr.io/khieron/khieron:${{ env.RELEASE_VERSION }}
             ```
 
             ## Helm Chart
 
             ```
-            helm install khieron oci://ghcr.io/khieron/charts/khieron --version ${GITHUB_REF_NAME#v}
+            helm install khieron oci://ghcr.io/khieron/charts/khieron --version ${{ env.RELEASE_VERSION }}
             ```
 
             ## Changes
 
             ${{ steps.changelog.outputs.CHANGELOG }}
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(env.RELEASE_VERSION, '-') }}
