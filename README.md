@@ -1,3 +1,8 @@
+[![Go](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.11+-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![GitHub release](https://img.shields.io/github/v/release/khieron/khieron)](https://github.com/khieron/khieron/releases)
+
 # Khieron - the lightweight Kubernetes-native agentic operator
 
 ## Introducing Project Khieron
