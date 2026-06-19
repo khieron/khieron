@@ -4,7 +4,7 @@ kind: EgressFirewall
 metadata:
   name: default
   labels:
-  {{- include "chart.labels" . | nindent 4 }}
+  {{- include "khieron.labels" . | nindent 4 }}
 spec:
   egress:
   - to:
