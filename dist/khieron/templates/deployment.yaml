@@ -32,6 +32,21 @@ spec:
               key: GOOGLE_API_KEY
               name: {{ include "khieron.fullname" . }}-google-api-key-secret
               optional: true
+        - name: GOOGLE_CLOUD_PROJECT
+          valueFrom:
+            secretKeyRef:
+              key: GOOGLE_CLOUD_PROJECT
+              name: {{ include "khieron.fullname" . }}-google-api-key-secret
+              optional: true
+        - name: GOOGLE_CLOUD_LOCATION
+          valueFrom:
+            secretKeyRef:
+              key: GOOGLE_CLOUD_LOCATION
+              name: {{ include "khieron.fullname" . }}-google-api-key-secret
+              optional: true
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: {{ quote .Values.controllerManager.manager.env.googleApplicationCredentials
+            }}
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
         image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag
@@ -58,6 +73,9 @@ spec:
         - mountPath: /etc/khieron
           name: agent-instruction
           readOnly: true
+        - mountPath: /var/secrets/google
+          name: gcp-sa-key
+          readOnly: true
       nodeSelector: {{- toYaml .Values.controllerManager.nodeSelector | nindent 8 }}
       securityContext: {{- toYaml .Values.controllerManager.podSecurityContext | nindent
         8 }}
@@ -70,3 +88,7 @@ spec:
       - configMap:
           name: {{ include "khieron.fullname" . }}-agent-instruction
         name: agent-instruction
+      - name: gcp-sa-key
+        secret:
+          optional: true
+          secretName: gcp-sa-key

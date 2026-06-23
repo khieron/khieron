@@ -118,6 +118,8 @@ helm -n $NAMESPACE install --create-namespace khieron oci://ghcr.io/khieron/char
 
 > To install on Openshift use `values-openshift.yaml` instead, to activate the Egress Firewall.
 
+> For other installation methods and models see the [Model Access document](./docs/model-access.md).
+
 ## Operation
 
 Install a Skill through a Helm Chart. See the [example skill](./docs/example-skill.md).
