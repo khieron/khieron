@@ -14,6 +14,8 @@ Khieron[<sup>1</sup>](#why-khieron) (pronounced Kay-ron) brings Kubernetes nativ
 
 See [Examples Skills](#example-skills) below for a comprehensive guide to Skills.
 
+Khieron is delighted to be included in the Lean Agents](https://leanagents.dev/) project list.
+
 ### The lightweight advantage
 
 Commonly cited agentic frameworks for Kubernetes tend to be general purpose behemoths, capable of doing many external facing tasks, but also bringing with them several external systems that and other projects that have a combinatorial effect in increasing complexity.
@@ -39,9 +41,9 @@ Khieron uses the [Agent Development Tookit (Go version)](https://github.com/goog
 There are no child containers to manage. No LiteLLM. No LangChain/LangGrpah. The Docker image is less than 1/10th the size of a comparable Python deployment.
 
 ```bash
-docker images quay.io/aicatalyst/khieron
+docker images ghcr.io/khieron/khieron
 IMAGE                               ID             DISK USAGE   CONTENT SIZE   EXTRA
-quay.io/aicatalyst/khieron:v0.0.3   87887f780280        265MB         73.9MB
+ghcr.io/khieron/khieron:v0.1.1      035396f6f347        265MB         73.9MB
 ```
 
 ### Flexibility
@@ -111,7 +113,7 @@ Install through Helm with a Google API Key:
 ```bash
 NAMESPACE=khieron-system
 GOOGLE_API_KEY=<your key from Google>
-helm -n $NAMESPACE install --create-namespace khieron ./dist/khieron/ -f dist/khieron/values.yaml --set googleApiKeySecret.googleApiKey=$GOOGLE_API_KEY
+helm -n $NAMESPACE install --create-namespace khieron oci://ghcr.io/khieron/charts/khieron --set googleApiKeySecret.googleApiKey=$GOOGLE_API_KEY
 ```
 
 > To install on Openshift use `values-openshift.yaml` instead, to activate the Egress Firewall.
@@ -305,25 +307,3 @@ using the same commands above to sync the latest changes. Review
 any custom values previously added to `dist/chart/values.yaml`
 and reapply them after regeneration.
 
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
-## License
-
-Copyright 2026.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
