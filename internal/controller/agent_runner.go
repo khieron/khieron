@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -31,9 +32,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"google.golang.org/adk/agent"
+	"google.golang.org/adk/model"
+	"google.golang.org/adk/model/gemini"
 	"google.golang.org/adk/runner"
 	"google.golang.org/adk/session"
 	"google.golang.org/genai"
@@ -58,6 +62,10 @@ type AgentRunnerLoop struct {
 	client.Client
 	Scheme *runtime.Scheme
 
+	Model      model.LLM
+	modelName  string
+	modelReady bool
+
 	mu     sync.RWMutex
 	agents map[string]*AgentEntry // keyed by CR namespaced name string
 
@@ -66,12 +74,24 @@ type AgentRunnerLoop struct {
 }
 
 // NewAgentRunnerLoop creates a new AgentRunnerLoop.
-func NewAgentRunnerLoop(c client.Client, scheme *runtime.Scheme) *AgentRunnerLoop {
+func NewAgentRunnerLoop(c client.Client, scheme *runtime.Scheme, modelName string) *AgentRunnerLoop {
 	return &AgentRunnerLoop{
-		Client: c,
-		Scheme: scheme,
-		agents: make(map[string]*AgentEntry),
-		notify: make(chan struct{}, 1),
+		Client:    c,
+		Scheme:    scheme,
+		modelName: modelName,
+		agents:    make(map[string]*AgentEntry),
+		notify:    make(chan struct{}, 1),
+	}
+}
+
+// ReadyzCheck returns a healthz.Checker that reports healthy only after
+// the LLM model has been successfully created.
+func (l *AgentRunnerLoop) ReadyzCheck() healthz.Checker {
+	return func(_ *http.Request) error {
+		if !l.modelReady {
+			return fmt.Errorf("LLM model %q not yet initialized", l.modelName)
+		}
+		return nil
 	}
 }
 
@@ -128,7 +148,14 @@ func (l *AgentRunnerLoop) GetConfigMapRV(key string) (string, bool) {
 // Start implements manager.Runnable. It runs the periodic agent execution loop.
 func (l *AgentRunnerLoop) Start(ctx context.Context) error {
 	log := logf.FromContext(ctx).WithName("agent-runner")
-	log.Info("Agent runner loop started")
+
+	llmModel, err := l.createModel(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create LLM model: %w", err)
+	}
+	l.Model = llmModel
+	l.modelReady = true
+	log.Info("Agent runner loop started", "model", l.modelName)
 
 	// Tick every 30 seconds to check if any agent is due for execution
 	ticker := time.NewTicker(30 * time.Second)
@@ -395,6 +422,47 @@ func (l *AgentRunnerLoop) createFallbackAdvisory(ctx context.Context, crKey type
 	}
 
 	return nil
+}
+
+// fakeModel is a no-op LLM used for e2e tests where no real API key is available.
+type fakeModel struct{}
+
+func (m *fakeModel) Name() string { return "fake" }
+
+func (m *fakeModel) GenerateContent(_ context.Context, _ *model.LLMRequest, _ bool) iter.Seq2[*model.LLMResponse, error] {
+	return func(yield func(*model.LLMResponse, error) bool) {
+		yield(&model.LLMResponse{
+			Content:      genai.NewContentFromText("No issues found.", genai.RoleModel),
+			FinishReason: genai.FinishReasonStop,
+			TurnComplete: true,
+		}, nil)
+	}
+}
+
+// createModel creates the LLM model using either Vertex AI or the Gemini API,
+// depending on environment variables. If the model name is "fake", a no-op
+// stub is returned instead.
+func (l *AgentRunnerLoop) createModel(ctx context.Context) (model.LLM, error) {
+	log := logf.FromContext(ctx)
+	if l.modelName == "fake" {
+		log.Info("Using fake model for testing")
+		return &fakeModel{}, nil
+	}
+	project := os.Getenv("GOOGLE_CLOUD_PROJECT")
+	location := os.Getenv("GOOGLE_CLOUD_LOCATION")
+	if project != "" && location != "" {
+		log.Info("Creating model via Vertex AI", "model", l.modelName, "project", project, "location", location)
+		return gemini.NewModel(ctx, l.modelName, &genai.ClientConfig{
+			Backend:  genai.BackendVertexAI,
+			Project:  project,
+			Location: location,
+		})
+	}
+	log.Info("Creating model via Gemini API", "model", l.modelName)
+	return gemini.NewModel(ctx, l.modelName, &genai.ClientConfig{
+		APIKey:  os.Getenv("GOOGLE_API_KEY"),
+		Backend: genai.BackendGeminiAPI,
+	})
 }
 
 // cleanupAll removes all cached skill directories on shutdown.

@@ -18,14 +18,11 @@ package controller
 
 import (
 	"context"
-	"iter"
 	"os"
 	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"google.golang.org/adk/model"
-	"google.golang.org/genai"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,20 +32,6 @@ import (
 
 	agencyv1alpha1 "github.com/khieron/khieron/api/v1alpha1"
 )
-
-type mockModel struct{}
-
-func (m *mockModel) Name() string { return "mock" }
-
-func (m *mockModel) GenerateContent(_ context.Context, _ *model.LLMRequest, _ bool) iter.Seq2[*model.LLMResponse, error] {
-	return func(yield func(*model.LLMResponse, error) bool) {
-		yield(&model.LLMResponse{
-			Content:      genai.NewContentFromText("No issues found.", genai.RoleModel),
-			FinishReason: genai.FinishReasonStop,
-			TurnComplete: true,
-		}, nil)
-	}
-}
 
 var _ = Describe("Skill Controller", func() {
 	Context("When reconciling a resource", func() {
@@ -127,14 +110,14 @@ var _ = Describe("Skill Controller", func() {
 			Expect(os.WriteFile(instructionFile, []byte("You are a test agent."), 0644)).To(Succeed())
 
 			By("Reconciling the created resource")
+			runnerLoop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake")
+			runnerLoop.Model = &fakeModel{}
+			runnerLoop.modelReady = true
 			controllerReconciler := &SkillReconciler{
 				Client:          k8sClient,
 				Scheme:          k8sClient.Scheme(),
-				RunnerLoop:      NewAgentRunnerLoop(k8sClient, k8sClient.Scheme()),
+				RunnerLoop:      runnerLoop,
 				InstructionPath: instructionFile,
-				ModelFactory: func(_ context.Context) (model.LLM, error) {
-					return &mockModel{}, nil
-				},
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
