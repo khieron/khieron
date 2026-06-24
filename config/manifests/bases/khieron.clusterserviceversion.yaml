@@ -29,7 +29,7 @@ spec:
 
     See the Khieron repo for more details.
 
-    The service requires a Secret with a GOOGLE_API_KEY:
+    The service requires a Secret with a Google API Key from Google AI Studio:
 
     ```
     kubectl -n khieron-system create secret generic google-api-key \
@@ -66,7 +66,7 @@ spec:
   - sre
   links:
   - name: Khieron
-    url: https://khieron.domain
+    url: https://github.com/khieron
   maintainers:
   - email: scondon@redhat.com
     name: Sean Condon
