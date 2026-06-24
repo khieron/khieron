@@ -53,9 +53,25 @@ import (
 // ModelFactory creates a model.LLM instance for use by the agent.
 type ModelFactory func(ctx context.Context) (model.LLM, error)
 
-// NewGeminiModelFactory returns a ModelFactory that creates a Gemini model.
-func NewGeminiModelFactory(modelName string) ModelFactory {
+// NewModelFactory returns a ModelFactory that creates a model backed by
+// either the Gemini API or Vertex AI, depending on environment variables.
+//
+// Vertex AI is used when GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION are
+// set. Otherwise falls back to the Gemini API using GOOGLE_API_KEY.
+func NewModelFactory(modelName string) ModelFactory {
 	return func(ctx context.Context) (model.LLM, error) {
+		log := logf.FromContext(ctx)
+		project := os.Getenv("GOOGLE_CLOUD_PROJECT")
+		location := os.Getenv("GOOGLE_CLOUD_LOCATION")
+		if project != "" && location != "" {
+			log.Info("Creating model via Vertex AI", "model", modelName, "project", project, "location", location)
+			return gemini.NewModel(ctx, modelName, &genai.ClientConfig{
+				Backend:  genai.BackendVertexAI,
+				Project:  project,
+				Location: location,
+			})
+		}
+		log.Info("Creating model via Gemini API", "model", modelName)
 		return gemini.NewModel(ctx, modelName, &genai.ClientConfig{
 			APIKey:  os.Getenv("GOOGLE_API_KEY"),
 			Backend: genai.BackendGeminiAPI,

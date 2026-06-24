@@ -60,14 +60,6 @@ var _ = Describe("Manager", Ordered, func() {
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to label namespace with restricted policy")
 
-		if apiKey := os.Getenv("GOOGLE_API_KEY"); apiKey != "" {
-			By("creating the google-api-key secret")
-			cmd = exec.Command("kubectl", "create", "secret", "generic", "google-api-key",
-				"--from-literal=GOOGLE_API_KEY="+apiKey, "-n", namespace)
-			_, err = utils.Run(cmd)
-			Expect(err).NotTo(HaveOccurred(), "Failed to create google-api-key secret")
-		}
-
 		By("installing CRDs")
 		cmd = exec.Command("make", "install")
 		_, err = utils.Run(cmd)

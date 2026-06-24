@@ -41,6 +41,8 @@ controllerManager:
       capabilities:
         drop:
         - ALL
+    env:
+      googleApplicationCredentials: /var/secrets/google/key.json
     image:
       repository: ghcr.io/khieron/khieron
       tag: ""
@@ -62,6 +64,8 @@ controllerManager:
   topologySpreadConstraints: []
 googleApiKeySecret:
   googleApiKey: ""
+  googleCloudLocation: ""
+  googleCloudProject: ""
 kubernetesClusterDomain: cluster.local
 metricsService:
   ports:

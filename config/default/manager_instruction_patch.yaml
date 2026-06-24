@@ -1,15 +1,23 @@
-# This patch mounts the agent-instruction ConfigMap and adds the flag to use it.
+# This patch mounts the agent-instruction ConfigMap and the optional GCP
+# service account key, and adds the flag to use the instruction file.
 - op: add
   path: /spec/template/spec/volumes
   value:
     - name: agent-instruction
       configMap:
         name: agent-instruction
+    - name: google-service-account-key
+      secret:
+        secretName: google-service-account-key
+        optional: true
 - op: add
   path: /spec/template/spec/containers/0/volumeMounts
   value:
     - name: agent-instruction
       mountPath: /etc/khieron
+      readOnly: true
+    - name: google-service-account-key
+      mountPath: /var/secrets/google
       readOnly: true
 - op: add
   path: /spec/template/spec/containers/0/args/-

@@ -228,7 +228,7 @@ func main() {
 	if err := (&controller.SkillReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
-		ModelFactory:    controller.NewGeminiModelFactory(modelName),
+		ModelFactory:    controller.NewModelFactory(modelName),
 		Recorder:        mgr.GetEventRecorderFor("skill-controller"),
 		RunnerLoop:      runnerLoop,
 		InstructionPath: agentInstructionPath,

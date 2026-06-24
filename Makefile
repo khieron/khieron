@@ -205,6 +205,7 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
 	mkdir -p dist
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	@bash hack/setup-gcp-sa-secret.sh > /dev/null
 	$(KUSTOMIZE) build config/default > dist/install.yaml
 
 HELMIFY ?= $(LOCALBIN)/helmify
@@ -215,7 +216,11 @@ $(HELMIFY): $(LOCALBIN)
 
 .PHONY: helm-chart
 helm-chart: manifests generate kustomize helmify ## Generate a Helm chart from kustomize output.
+	@bash hack/setup-gcp-sa-secret.sh > /dev/null
 	$(KUSTOMIZE) build config/default | $(HELMIFY) dist/khieron khieron
+	@echo "Patching Helm secret template with conditional validation..."
+	@bash hack/patch-helm-secret.sh
+	@bash hack/patch-helm-deployment-sa-secret.sh
 
 ##@ Deployment
 
@@ -235,9 +240,15 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	echo "GOOGLE_API_KEY=$(GOOGLE_API_KEY)" > config/default/google-api-key.env
+	echo "GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT)" >> config/default/google-api-key.env
+	echo "GOOGLE_CLOUD_LOCATION=$(GOOGLE_CLOUD_LOCATION)" >> config/default/google-api-key.env
+
+	@bash hack/setup-gcp-sa-secret.sh > /dev/null
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f - ; \
 	status=$$? ; \
 	echo "GOOGLE_API_KEY=" > config/default/google-api-key.env ; \
+	echo "GOOGLE_CLOUD_PROJECT=" >> config/default/google-api-key.env ; \
+	echo "GOOGLE_CLOUD_LOCATION=global" >> config/default/google-api-key.env ; \
 	exit $$status
 	$(MAKE) deploy-example-skills
 
