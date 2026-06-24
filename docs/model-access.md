@@ -1,8 +1,6 @@
 # Model Access
 
-Currently only Google models can be used with the **Go** version of ADK. This is down to the choices provided in the Go ADK implemntation at [https://github.com/google/adk-go/tree/main/model](https://github.com/google/adk-go/tree/main/model).
-
-The general [description on model access](https://adk.dev/agents/models/) relates to the Python version of the SDK, and so do not apply here.
+Currently only Google models can be used with the **Go** version of ADK. This is down to the choices provided in the Go ADK implemntation at [https://github.com/google/adk-go/tree/main/model](https://github.com/google/adk-go/tree/main/model). This may be expanded in future.
 
 The models cn be accessed in 2 ways:
 
@@ -27,13 +25,13 @@ helm -n $NAMESPACE install --create-namespace khieron ./dist/khieron/ -f dist/kh
 
 ## Access through Vertex AI
 
-If access by GOOGLE_API_KEY is not permitted by your organization, then access through Vertex AI may be a better option.
+Access through Vertex AI may be preferred by some organizations.
 
 This approach requires 3 pieces of information:
 
-* GOOGLE_CLOUD_PROJECT
-* GOOGLE_CLOUD_LOCATION
-* A key for a Service Account that allows access to the Vertex API saved as a JSON file.
+* GOOGLE_CLOUD_PROJECT name
+* GOOGLE_CLOUD_LOCATION region name
+* A key for a Service Account that allows access to the Vertex API.
 
 ### GCP Service Account
 
@@ -50,7 +48,7 @@ Add a Key to the service account and export it as a JSON file to your local syst
 ```bash
 GOOGLE_CLOUD_PROJECT=<Google Cloud Project name>
 GOOGLE_CLOUD_LOCATION=<Google cloud region name - 'global' by default>
-KEY_FILE=<local location of service account file yu download from GCP in JSON format>
+KEY_FILE=<local location of service account file downloaded from GCP in JSON format>
 
 helm -n khieron-system install khieron oci://ghcr.io/khieron/charts/khieron \
 --set googleApiKeySecret.googleCloudProject=$GOOGLE_CLOUD_PROJECT \
@@ -60,6 +58,8 @@ helm -n khieron-system install khieron oci://ghcr.io/khieron/charts/khieron \
 
 ### Model choice
 
-Depending on the GCP project the level of model available may vary. If the default model `gemini-2.5-flash` is not be available, substitue in the nearest capability flash model e.g. `gemini-3.5-flash`.
+Depending on the GCP project, the level of model available may vary. If the default model `gemini-2.5-flash` is not be available, substitue in the nearest capability flash model e.g. `gemini-3.5-flash`.
 
-The `*-flash-lite` models are usually not suitable for use with the agent, but the capability will depend on the complexity of the skills you give it.  
+Check the controller logs after deployment for any errors related to the chosen model.
+
+The `*-flash-lite` models are usually not suitable for use with the agent, but the capability will depend on the complexity of the skills you give it.

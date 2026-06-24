@@ -45,7 +45,7 @@ controllerManager:
       googleApplicationCredentials: /var/secrets/google/key.json
     image:
       repository: ghcr.io/khieron/khieron
-      tag: v0.1.1
+      tag: ""
     imagePullPolicy: IfNotPresent
     resources:
       limits:
