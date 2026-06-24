@@ -6,9 +6,9 @@
     - name: agent-instruction
       configMap:
         name: agent-instruction
-    - name: gcp-sa-key
+    - name: google-service-account-key
       secret:
-        secretName: gcp-sa-key
+        secretName: google-service-account-key
         optional: true
 - op: add
   path: /spec/template/spec/containers/0/volumeMounts
@@ -16,7 +16,7 @@
     - name: agent-instruction
       mountPath: /etc/khieron
       readOnly: true
-    - name: gcp-sa-key
+    - name: google-service-account-key
       mountPath: /var/secrets/google
       readOnly: true
 - op: add

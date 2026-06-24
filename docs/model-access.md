@@ -45,23 +45,17 @@ The Service Account should be bound to the role: `roles/aiplatform.user`.
 
 Add a Key to the service account and export it as a JSON file to your local system. This should be treated as a credential and should not be shared or checked in to git.
 
-Then create a secret from the Key JSON file:
-
-```bash
-KEY_FILE=<local location of service account file yu download from GCP in JSON format>
-kubectl create namespace khieron-system
-kubectl -n khieron-system create secret generic gcp-sa-key  \
- --from-file=key.json=$KEY_FILE
-```
-
 ### Deploy Khieron
 
 ```bash
 GOOGLE_CLOUD_PROJECT=<Google Cloud Project name>
 GOOGLE_CLOUD_LOCATION=<Google cloud region name - 'global' by default>
-helm -n khieron-system install khieron ./dist/khieron/ -f dist/khieron/values.yaml \
+KEY_FILE=<local location of service account file yu download from GCP in JSON format>
+
+helm -n khieron-system install khieron oci://ghcr.io/khieron/charts/khieron \
 --set googleApiKeySecret.googleCloudProject=$GOOGLE_CLOUD_PROJECT \
---set googleApiKeySecret.googleCloudLocation=$GOOGLE_CLOUD_LOCATION
+--set googleApiKeySecret.googleCloudLocation=$GOOGLE_CLOUD_LOCATION \
+--set-file googleServiceAccountKey.keyJson=$KEY_FILE
 ```
 
 ### Model choice

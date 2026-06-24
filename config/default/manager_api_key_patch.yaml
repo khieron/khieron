@@ -3,7 +3,7 @@
 #   - GOOGLE_API_KEY (for direct Gemini API access), OR
 #   - GOOGLE_CLOUD_PROJECT + GOOGLE_CLOUD_LOCATION (for Vertex AI via service account)
 # Helm chart validation ensures exactly one authentication method is provided.
-# For non-GKE clusters, create a "gcp-sa-key" secret with the service account key JSON file —
+# For non-GKE clusters, create a "google-service-account-key" secret with the service account key JSON file —
 # GOOGLE_APPLICATION_CREDENTIALS points to where the volume mount places it.
 # On GKE with Workload Identity, this env var is ignored and the key secret is not needed.
 - op: add
