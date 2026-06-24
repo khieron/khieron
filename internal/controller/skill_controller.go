@@ -29,15 +29,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"google.golang.org/adk/agent/llmagent"
-	"google.golang.org/adk/model"
-	"google.golang.org/adk/model/gemini"
 	"google.golang.org/adk/runner"
 	"google.golang.org/adk/session"
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/functiontool"
 	"google.golang.org/adk/tool/skilltoolset"
 	"google.golang.org/adk/tool/skilltoolset/skill"
-	"google.golang.org/genai"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -50,42 +47,12 @@ import (
 	agencyv1alpha1 "github.com/khieron/khieron/api/v1alpha1"
 )
 
-// ModelFactory creates a model.LLM instance for use by the agent.
-type ModelFactory func(ctx context.Context) (model.LLM, error)
-
-// NewModelFactory returns a ModelFactory that creates a model backed by
-// either the Gemini API or Vertex AI, depending on environment variables.
-//
-// Vertex AI is used when GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION are
-// set. Otherwise falls back to the Gemini API using GOOGLE_API_KEY.
-func NewModelFactory(modelName string) ModelFactory {
-	return func(ctx context.Context) (model.LLM, error) {
-		log := logf.FromContext(ctx)
-		project := os.Getenv("GOOGLE_CLOUD_PROJECT")
-		location := os.Getenv("GOOGLE_CLOUD_LOCATION")
-		if project != "" && location != "" {
-			log.Info("Creating model via Vertex AI", "model", modelName, "project", project, "location", location)
-			return gemini.NewModel(ctx, modelName, &genai.ClientConfig{
-				Backend:  genai.BackendVertexAI,
-				Project:  project,
-				Location: location,
-			})
-		}
-		log.Info("Creating model via Gemini API", "model", modelName)
-		return gemini.NewModel(ctx, modelName, &genai.ClientConfig{
-			APIKey:  os.Getenv("GOOGLE_API_KEY"),
-			Backend: genai.BackendGeminiAPI,
-		})
-	}
-}
-
 // SkillReconciler reconciles a Skill object
 type SkillReconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
 	Recorder        record.EventRecorder
 	RunnerLoop      *AgentRunnerLoop
-	ModelFactory    ModelFactory
 	InstructionPath string
 }
 
@@ -464,11 +431,6 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	scriptTools = append(scriptTools, setAdvisoryLabelsTool)
 
-	llmModel, err := r.ModelFactory(ctx)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to create model: %v", err)
-	}
-
 	data, err := os.ReadFile(r.InstructionPath)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to read instruction file %s: %v", r.InstructionPath, err)
@@ -477,7 +439,7 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	skillAgent, err := llmagent.New(llmagent.Config{
 		Name:        "skill_user_agent",
-		Model:       llmModel,
+		Model:       r.RunnerLoop.Model,
 		Description: "Monitor System",
 		Instruction: instruction,
 		Tools:       scriptTools,

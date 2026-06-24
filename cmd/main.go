@@ -219,7 +219,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	runnerLoop := controller.NewAgentRunnerLoop(mgr.GetClient(), mgr.GetScheme())
+	runnerLoop := controller.NewAgentRunnerLoop(mgr.GetClient(), mgr.GetScheme(), modelName)
 	if err := mgr.Add(runnerLoop); err != nil {
 		setupLog.Error(err, "unable to add agent runner loop to manager")
 		os.Exit(1)
@@ -228,7 +228,6 @@ func main() {
 	if err := (&controller.SkillReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
-		ModelFactory:    controller.NewModelFactory(modelName),
 		Recorder:        mgr.GetEventRecorderFor("skill-controller"),
 		RunnerLoop:      runnerLoop,
 		InstructionPath: agentInstructionPath,
@@ -267,7 +266,7 @@ func main() {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := mgr.AddReadyzCheck("readyz", runnerLoop.ReadyzCheck()); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}

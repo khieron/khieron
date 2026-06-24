@@ -58,8 +58,12 @@ helm -n khieron-system install khieron oci://ghcr.io/khieron/charts/khieron \
 
 ### Model choice
 
-Depending on the GCP project, the level of model available may vary. If the default model `gemini-2.5-flash` is not be available, substitue in the nearest capability flash model e.g. `gemini-3.5-flash`.
+Depending on the GCP project, the level of model available may vary. Check the controller logs after deployment for any errors related to the chosen model.
 
-Check the controller logs after deployment for any errors related to the chosen model.
+At the time of writing (June 2026) `gemini-2.5-flash` is the most suitable model because of its pricing and capability, but will only be supported by Google until October 2026.
+
+The next most suitable model is `gemini-3.5-flash`, and while it has greater capabilities it costs 5x more for input tokens and 3.6x more for output tokens than 2.5 Flash.
+
+Specifying the model as `gemini-flash-latest` is a future proof option, that may be a good choice if lower maintenance is required. This will track the latest model as new versions of Gemini Flash become available, but with the risk of higher charges. 
 
 The `*-flash-lite` models are usually not suitable for use with the agent, but the capability will depend on the complexity of the skills you give it.

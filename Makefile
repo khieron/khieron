@@ -54,6 +54,8 @@ OPERATOR_SDK_VERSION ?= v1.42.2
 IMG ?= $(IMAGE_TAG_BASE):$(VERSION)
 # Namespace to deploy example skills into
 EXAMPLE_SKILLS_NAMESPACE ?= example-skills
+# Model name passed to the operator. Override with MODEL_NAME=fake for e2e tests.
+MODEL_NAME ?= gemini-2.5-flash
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -239,6 +241,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	sed -i 's/--model-name=.*/--model-name=$(MODEL_NAME)/' config/default/manager_model_patch.yaml
 	echo "GOOGLE_API_KEY=$(GOOGLE_API_KEY)" > config/default/google-api-key.env
 	echo "GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT)" >> config/default/google-api-key.env
 	echo "GOOGLE_CLOUD_LOCATION=$(GOOGLE_CLOUD_LOCATION)" >> config/default/google-api-key.env
