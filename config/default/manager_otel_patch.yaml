@@ -1,0 +1,14 @@
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: OTEL_EXPORTER_OTLP_HEADERS
+    valueFrom:
+      secretKeyRef:
+        name: otel-headers-secret
+        key: OTEL_EXPORTER_OTLP_HEADERS
+        optional: true
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: "http://o2-openobserve-standalone.openobserve.svc.cluster.local:5080/api/default"

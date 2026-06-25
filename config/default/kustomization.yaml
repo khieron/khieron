@@ -53,6 +53,10 @@ patches:
 - path: manager_model_patch.yaml
   target:
     kind: Deployment
+# [OTEL] Set the OpenTelemetry OTLP traces endpoint.
+- path: manager_otel_patch.yaml
+  target:
+    kind: Deployment
 
 # Uncomment the patches line if you enable Metrics and CertManager
 # [METRICS-WITH-CERTS] To enable metrics protected with certManager, uncomment the following line.
@@ -253,3 +257,6 @@ secretGenerator:
 - name: google-api-key-secret
   envs:
   - google-api-key.env
+- name: otel-headers-secret
+  envs:
+  - otel-headers.env

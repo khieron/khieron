@@ -17,11 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -37,6 +39,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"google.golang.org/adk/telemetry"
 
 	agencyv1alpha1 "github.com/khieron/khieron/api/v1alpha1"
 	"github.com/khieron/khieron/internal/controller"
@@ -105,6 +113,46 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	setupLog.Info("khieron", "version", version.Version)
+
+	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
+		setupLog.Info("Initializing OpenTelemetry tracing", "endpoint", endpoint)
+		ctx := context.Background()
+		exporter, err := otlptracehttp.New(ctx)
+		if err != nil {
+			setupLog.Error(err, "failed to create OTLP exporter")
+			os.Exit(1)
+		}
+		res, err := resource.New(ctx,
+			resource.WithAttributes(
+				semconv.ServiceNameKey.String("khieron"),
+				semconv.ServiceVersionKey.String(version.Version),
+			),
+		)
+		if err != nil {
+			setupLog.Error(err, "failed to create OTel resource")
+			os.Exit(1)
+		}
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(exporter),
+			sdktrace.WithResource(res),
+		)
+		telemetryProviders, err := telemetry.New(ctx,
+			telemetry.WithTracerProvider(tp),
+			telemetry.WithGenAICaptureMessageContent(true),
+		)
+		if err != nil {
+			setupLog.Error(err, "failed to initialize ADK telemetry")
+			os.Exit(1)
+		}
+		telemetryProviders.SetGlobalOtelProviders()
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := telemetryProviders.Shutdown(shutdownCtx); err != nil {
+				setupLog.Error(err, "failed to shutdown telemetry providers")
+			}
+		}()
+	}
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
