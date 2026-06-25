@@ -67,3 +67,8 @@ The next most suitable model is `gemini-3.5-flash`, and while it has greater cap
 Specifying the model as `gemini-flash-latest` is a future proof option, that may be a good choice if lower maintenance is required. This will track the latest model as new versions of Gemini Flash become available, but with the risk of higher charges. 
 
 The `*-flash-lite` models are usually not suitable for use with the agent, but the capability will depend on the complexity of the skills you give it.
+
+The model may be changed through the [values.yaml](../dist/khieron/values.yaml) of the Helm chart with:
+
+```--set modelName=gemini-2.5-flash"
+```

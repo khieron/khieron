@@ -223,6 +223,7 @@ helm-chart: manifests generate kustomize helmify ## Generate a Helm chart from k
 	@echo "Patching Helm secret template with conditional validation..."
 	@bash hack/patch-helm-secret.sh
 	@bash hack/patch-helm-deployment-sa-secret.sh
+	@bash hack/patch-helm-model-name.sh
 
 ##@ Deployment
 
@@ -243,6 +244,7 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	sed -i 's/--model-name=.*/--model-name=$(MODEL_NAME)/' config/default/manager_model_patch.yaml
 	sed -i '/name: OTEL_EXPORTER_OTLP_ENDPOINT$$/{n;s|value: ".*"|value: "$(OTEL_EXPORTER_OTLP_ENDPOINT)"|;}' config/default/manager_otel_patch.yaml
+	sed -i '/name: MLFLOW_EXPERIMENT_ID$$/{n;s|value: ".*"|value: "$(MLFLOW_EXPERIMENT_ID)"|;}' config/default/manager_otel_patch.yaml
 	echo "GOOGLE_API_KEY=$(GOOGLE_API_KEY)" > config/default/google-api-key.env
 	echo "GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT)" >> config/default/google-api-key.env
 	echo "GOOGLE_CLOUD_LOCATION=$(GOOGLE_CLOUD_LOCATION)" >> config/default/google-api-key.env

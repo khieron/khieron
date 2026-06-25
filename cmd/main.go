@@ -117,7 +117,14 @@ func main() {
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
 		setupLog.Info("Initializing OpenTelemetry tracing", "endpoint", endpoint)
 		ctx := context.Background()
-		exporter, err := otlptracehttp.New(ctx)
+
+		var exporterOpts []otlptracehttp.Option
+		if expID := os.Getenv("MLFLOW_EXPERIMENT_ID"); expID != "" {
+			exporterOpts = append(exporterOpts, otlptracehttp.WithHeaders(map[string]string{
+				"x-mlflow-experiment-id": expID,
+			}))
+		}
+		exporter, err := otlptracehttp.New(ctx, exporterOpts...)
 		if err != nil {
 			setupLog.Error(err, "failed to create OTLP exporter")
 			os.Exit(1)

@@ -28,6 +28,7 @@ agentInstruction:
         "explaination": "{explaination}",
         "proposal": "Suspend the Skill agent until the problem is fixed"
     }
+modelName: gemini-2.5-flash
 controllerManager:
   manager:
     args:
@@ -35,7 +36,6 @@ controllerManager:
     - --leader-elect
     - --health-probe-bind-address=:8081
     - --agent-instruction-path=/etc/khieron/instruction.txt
-    - --model-name=gemini-2.5-flash
     containerSecurityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -43,9 +43,11 @@ controllerManager:
         - ALL
     env:
       googleApplicationCredentials: /var/secrets/google/key.json
+      mlflowExperimentId: ""
+      otelExporterOtlpEndpoint: http://mlflow-mlflow.mlflow.svc.cluster.local:5000
     image:
       repository: ghcr.io/khieron/khieron
-      tag: ""
+      tag: v0.1.2-3-gfb33a10-dirty
     imagePullPolicy: IfNotPresent
     resources:
       limits:
@@ -74,6 +76,8 @@ metricsService:
     protocol: TCP
     targetPort: 8443
   type: ClusterIP
+otelHeadersSecret:
+  otelExporterOtlpHeaders: ""
 serviceAccount:
   annotations: {}
   automount: true
