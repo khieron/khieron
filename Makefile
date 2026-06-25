@@ -224,6 +224,8 @@ helm-chart: manifests generate kustomize helmify ## Generate a Helm chart from k
 	@bash hack/patch-helm-secret.sh
 	@bash hack/patch-helm-deployment-sa-secret.sh
 	@bash hack/patch-helm-model-name.sh
+	@bash hack/patch-helm-otel-headers.sh
+	@bash hack/patch-helm-otel-env.sh
 
 ##@ Deployment
 
