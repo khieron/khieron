@@ -44,7 +44,7 @@ controllerManager:
     env:
       googleApplicationCredentials: /var/secrets/google/key.json
       mlflowExperimentId: ""
-      otelExporterOtlpEndpoint: http://mlflow-mlflow.mlflow.svc.cluster.local:5000
+      otelExporterOtlpEndpoint: ""
     image:
       repository: ghcr.io/khieron/khieron
       tag: ""
