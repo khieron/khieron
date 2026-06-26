@@ -29,18 +29,23 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	crzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"go.opentelemetry.io/contrib/bridges/otelzap"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -99,10 +104,10 @@ func main() {
 		"The Gemini model to use for agent skills.")
 	flag.StringVar(&agentInstructionPath, "agent-instruction-path", "",
 		"Path to a file containing the agent system instruction. If empty, uses the built-in default.")
-	opts := zap.Options{
+	zapOpts := crzap.Options{
 		Development: true,
 	}
-	opts.BindFlags(flag.CommandLine)
+	zapOpts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
 	if showVersion {
@@ -110,25 +115,32 @@ func main() {
 		os.Exit(0)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
-	setupLog.Info("khieron", "version", version.Version)
-
+	// OTel must be initialized before ctrl.SetLogger (which can only be called once)
+	// so the otelzap log bridge core can be included in the logger.
+	var otelWrapCore zap.Option
 	if endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); endpoint != "" {
-		setupLog.Info("Initializing OpenTelemetry tracing", "endpoint", endpoint)
+		fmt.Fprintf(os.Stderr, "Initializing OpenTelemetry, endpoint=%s\n", endpoint)
 		ctx := context.Background()
 
-		var exporterOpts []otlptracehttp.Option
+		var traceExporterOpts []otlptracehttp.Option
+		var logExporterOpts []otlploghttp.Option
 		if expID := os.Getenv("MLFLOW_EXPERIMENT_ID"); expID != "" {
-			exporterOpts = append(exporterOpts, otlptracehttp.WithHeaders(map[string]string{
-				"x-mlflow-experiment-id": expID,
-			}))
+			headers := map[string]string{"x-mlflow-experiment-id": expID}
+			traceExporterOpts = append(traceExporterOpts, otlptracehttp.WithHeaders(headers))
+			logExporterOpts = append(logExporterOpts, otlploghttp.WithHeaders(headers))
 		}
-		exporter, err := otlptracehttp.New(ctx, exporterOpts...)
+
+		traceExporter, err := otlptracehttp.New(ctx, traceExporterOpts...)
 		if err != nil {
-			setupLog.Error(err, "failed to create OTLP exporter")
+			fmt.Fprintf(os.Stderr, "Failed to create OTLP trace exporter: %v\n", err)
 			os.Exit(1)
 		}
+		logExporter, err := otlploghttp.New(ctx, logExporterOpts...)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create OTLP log exporter: %v\n", err)
+			os.Exit(1)
+		}
+
 		res, err := resource.New(ctx,
 			resource.WithAttributes(
 				semconv.ServiceNameKey.String("khieron"),
@@ -136,19 +148,26 @@ func main() {
 			),
 		)
 		if err != nil {
-			setupLog.Error(err, "failed to create OTel resource")
+			fmt.Fprintf(os.Stderr, "Failed to create OTel resource: %v\n", err)
 			os.Exit(1)
 		}
+
 		tp := sdktrace.NewTracerProvider(
-			sdktrace.WithBatcher(exporter),
+			sdktrace.WithBatcher(traceExporter),
 			sdktrace.WithResource(res),
 		)
+		lp := sdklog.NewLoggerProvider(
+			sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
+			sdklog.WithResource(res),
+		)
+
 		telemetryProviders, err := telemetry.New(ctx,
 			telemetry.WithTracerProvider(tp),
+			telemetry.WithLoggerProvider(lp),
 			telemetry.WithGenAICaptureMessageContent(true),
 		)
 		if err != nil {
-			setupLog.Error(err, "failed to initialize ADK telemetry")
+			fmt.Fprintf(os.Stderr, "Failed to initialize ADK telemetry: %v\n", err)
 			os.Exit(1)
 		}
 		telemetryProviders.SetGlobalOtelProviders()
@@ -156,10 +175,22 @@ func main() {
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			if err := telemetryProviders.Shutdown(shutdownCtx); err != nil {
-				setupLog.Error(err, "failed to shutdown telemetry providers")
+				fmt.Fprintf(os.Stderr, "Failed to shutdown telemetry providers: %v\n", err)
 			}
 		}()
+
+		otelWrapCore = zap.WrapCore(func(stdout zapcore.Core) zapcore.Core {
+			return zapcore.NewTee(stdout, otelzap.NewCore("khieron", otelzap.WithLoggerProvider(lp)))
+		})
 	}
+
+	loggerOpts := []crzap.Opts{crzap.UseFlagOptions(&zapOpts)}
+	if otelWrapCore != nil {
+		loggerOpts = append(loggerOpts, crzap.RawZapOpts(otelWrapCore))
+	}
+	ctrl.SetLogger(crzap.New(loggerOpts...))
+
+	setupLog.Info("khieron", "version", version.Version)
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
