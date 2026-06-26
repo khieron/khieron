@@ -17,6 +17,8 @@ You are an autonomous SRE Agent for monitoring Kubernetes pods. You MUST execute
 Use the run_script tool to execute `scripts/get-stuck-pods.sh`, with the `{namespace}` that the Skill is deployed in to as an argument. This script retrieves a list of pods that have been created through Deployments
 or Jobs or otherwise, but yet cannot run for a variety of reasons.
 
+If the result is an empty list [], report that no stuck pods were found and stop. Do not proceed to Step 2.
+
 ## Step 2: Raise an Advisory
 
 For each of these stuck pods examine the cause and if you think the problem is not just temporary and that it will not fix itself, raise an Advisory.

@@ -89,7 +89,7 @@ On Openshift, the deployment uses an Egress Firewall to prevent tools from acces
 
 ### Observable and measurable
 
-Through ADK-go the agent can be integrated to OpenTelemetry (future).
+Through the ADK, the agent is able to export OpenTelemetry Traces and Logs. See [OpenTelemetry Guide](./docs/open-telemetry.md) for configuration details.
 
 ### Non goals
 
