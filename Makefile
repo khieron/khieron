@@ -223,6 +223,9 @@ helm-chart: manifests generate kustomize helmify ## Generate a Helm chart from k
 	@echo "Patching Helm secret template with conditional validation..."
 	@bash hack/patch-helm-secret.sh
 	@bash hack/patch-helm-deployment-sa-secret.sh
+	@bash hack/patch-helm-model-name.sh
+	@bash hack/patch-helm-otel-headers.sh
+	@bash hack/patch-helm-otel-env.sh
 
 ##@ Deployment
 
@@ -242,9 +245,12 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	sed -i 's/--model-name=.*/--model-name=$(MODEL_NAME)/' config/default/manager_model_patch.yaml
+	sed -i '/name: OTEL_EXPORTER_OTLP_ENDPOINT$$/{n;s|value: ".*"|value: "$(OTEL_EXPORTER_OTLP_ENDPOINT)"|;}' config/default/manager_otel_patch.yaml
+	sed -i '/name: MLFLOW_EXPERIMENT_ID$$/{n;s|value: ".*"|value: "$(MLFLOW_EXPERIMENT_ID)"|;}' config/default/manager_otel_patch.yaml
 	echo "GOOGLE_API_KEY=$(GOOGLE_API_KEY)" > config/default/google-api-key.env
 	echo "GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT)" >> config/default/google-api-key.env
 	echo "GOOGLE_CLOUD_LOCATION=$(GOOGLE_CLOUD_LOCATION)" >> config/default/google-api-key.env
+	echo "OTEL_EXPORTER_OTLP_HEADERS=$(OTEL_EXPORTER_OTLP_HEADERS)" > config/default/otel-headers.env
 
 	@bash hack/setup-gcp-sa-secret.sh > /dev/null
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f - ; \
@@ -252,12 +258,13 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	echo "GOOGLE_API_KEY=" > config/default/google-api-key.env ; \
 	echo "GOOGLE_CLOUD_PROJECT=" >> config/default/google-api-key.env ; \
 	echo "GOOGLE_CLOUD_LOCATION=global" >> config/default/google-api-key.env ; \
+	echo "OTEL_EXPORTER_OTLP_HEADERS=" > config/default/otel-headers.env ; \
 	exit $$status
 	$(MAKE) deploy-example-skills
 
 .PHONY: deploy-example-skills
 deploy-example-skills: ## Deploy example skills to the K8s cluster specified in ~/.kube/config.
-	helm upgrade --install monitor-pods-skill example-skills/monitor-pods-skill -n $(EXAMPLE_SKILLS_NAMESPACE) --create-namespace --set serviceAccount.name=khieron-controller-manager
+	helm upgrade --install monitor-pods-skill example-skills/monitor-pods-skill -n $(EXAMPLE_SKILLS_NAMESPACE) --create-namespace --set serviceAccount.name=khieron-controller-manager --set skill.intervalMinute=1
 
 .PHONY: undeploy
 undeploy: kustomize undeploy-example-skills ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.

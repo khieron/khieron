@@ -1,0 +1,19 @@
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: OTEL_EXPORTER_OTLP_HEADERS
+    valueFrom:
+      secretKeyRef:
+        name: otel-headers-secret
+        key: OTEL_EXPORTER_OTLP_HEADERS
+        optional: true
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: "http://mlflow-mlflow.mlflow.svc.cluster.local:5000"
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: MLFLOW_EXPERIMENT_ID
+    value: "2"

@@ -23,6 +23,7 @@ spec:
     spec:
       containers:
       - args: {{- toYaml .Values.controllerManager.manager.args | nindent 8 }}
+        - --model-name={{ .Values.modelName }}
         command:
         - /manager
         env:
@@ -47,6 +48,23 @@ spec:
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: {{ quote .Values.controllerManager.manager.env.googleApplicationCredentials
             }}
+        {{- if and .Values.otelHeadersSecret .Values.otelHeadersSecret.otelExporterOtlpHeaders }}
+        - name: OTEL_EXPORTER_OTLP_HEADERS
+          valueFrom:
+            secretKeyRef:
+              key: OTEL_EXPORTER_OTLP_HEADERS
+              name: {{ include "khieron.fullname" . }}-otel-headers-secret
+              optional: true
+        {{- end }}
+        {{- if .Values.controllerManager.manager.env.otelExporterOtlpEndpoint }}
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: {{ quote .Values.controllerManager.manager.env.otelExporterOtlpEndpoint
+            }}
+        {{- end }}
+        {{- if .Values.controllerManager.manager.env.mlflowExperimentId }}
+        - name: MLFLOW_EXPERIMENT_ID
+          value: {{ quote .Values.controllerManager.manager.env.mlflowExperimentId }}
+        {{- end }}
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
         image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag
