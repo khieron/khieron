@@ -65,7 +65,7 @@ The Skill CRD contains an `assets` folder to contain bash scripts used as Extern
 
 The controller also has some internally defined tools, written in Go, covering many useful gernal puspose tasks on the Kubernetes API. These are available to the Skills to perform tasks.
 
-> Support for MCP servers as additional tooling will be added in a future release.
+Support for MCP servers is through and `MCPConfigRef` link to a ConfigMap that contains an `mcp.json` file. The MCP servers thereby loaded are added to the set of tools available to the Skill.
 
 ### Kubernetes Native Human In the Loop
 

@@ -352,8 +352,34 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, fmt.Errorf("failed to get ConfigMap %q: %v", configMapKey, err)
 	}
 
-	// Check if the cached agent is still valid (ConfigMap hasn't changed)
+	// Fetch the MCP ConfigMap if referenced
+	var mcpConfigMap *corev1.ConfigMap
+	if skillCr.Spec.MCPConfigRef != nil {
+		mcpConfigMap = &corev1.ConfigMap{}
+		mcpConfigMapKey := types.NamespacedName{
+			Name:      skillCr.Spec.MCPConfigRef.Name,
+			Namespace: req.Namespace,
+		}
+		if err := r.Get(ctx, mcpConfigMapKey, mcpConfigMap); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to get MCP ConfigMap %q: %v", mcpConfigMapKey, err)
+		}
+	}
+
+	// Check if the cached agent is still valid (neither ConfigMap has changed)
+	skillRVMatch := false
+	mcpRVMatch := false
 	if cachedRV, exists := r.RunnerLoop.GetConfigMapRV(crKey); exists && cachedRV == configMap.ResourceVersion {
+		skillRVMatch = true
+	}
+	if mcpConfigMap == nil {
+		cachedMCPRV, exists := r.RunnerLoop.GetMCPConfigMapRV(crKey)
+		mcpRVMatch = !exists || cachedMCPRV == ""
+	} else {
+		if cachedMCPRV, exists := r.RunnerLoop.GetMCPConfigMapRV(crKey); exists && cachedMCPRV == mcpConfigMap.ResourceVersion {
+			mcpRVMatch = true
+		}
+	}
+	if skillRVMatch && mcpRVMatch {
 		if _, hasRunRequest := skillCr.Annotations[RunRequestedAnnotation]; hasRunRequest {
 			r.RunnerLoop.Notify()
 		}
@@ -431,6 +457,29 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	scriptTools = append(scriptTools, setAdvisoryLabelsTool)
 
+	// Create MCP toolsets if configured
+	allToolsets := []tool.Toolset{skillToolset}
+	var mcpCleanup func()
+	var mcpConfigMapRV string
+	if mcpConfigMap != nil {
+		mcpJSON, ok := mcpConfigMap.Data["mcp.json"]
+		if !ok {
+			return ctrl.Result{}, fmt.Errorf("MCP ConfigMap %q does not contain key \"mcp.json\"", mcpConfigMap.Name)
+		}
+		mcpConfig, err := ParseMCPConfig(mcpJSON)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to parse MCP config from ConfigMap %q: %v", mcpConfigMap.Name, err)
+		}
+		mcpToolsets, mcpClosers, err := CreateToolsets(mcpConfig, nil)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to create MCP toolsets: %v", err)
+		}
+		allToolsets = append(allToolsets, mcpToolsets...)
+		mcpCleanup = MCPCleanupFunc(mcpClosers)
+		mcpConfigMapRV = mcpConfigMap.ResourceVersion
+		log.Info("MCP toolsets created", "cr", crKey, "serverCount", len(mcpConfig.MCPServers))
+	}
+
 	data, err := os.ReadFile(r.InstructionPath)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to read instruction file %s: %v", r.InstructionPath, err)
@@ -443,7 +492,7 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		Description: "Monitor System",
 		Instruction: instruction,
 		Tools:       scriptTools,
-		Toolsets:    []tool.Toolset{skillToolset},
+		Toolsets:    allToolsets,
 	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create agent: %v", err)
@@ -466,6 +515,8 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		SessionService: sessionService,
 		SkillDir:       skillDir,
 		ConfigMapRV:    configMap.ResourceVersion,
+		MCPConfigMapRV: mcpConfigMapRV,
+		MCPCleanup:     mcpCleanup,
 		Interval:       time.Duration(skillCr.Spec.IntervalMinute) * time.Minute,
 		CRKey:          req.NamespacedName,
 	})
@@ -499,8 +550,8 @@ func (r *SkillReconciler) findObjectsForConfigMap(ctx context.Context, obj clien
 
 	var requests []reconcile.Request
 	for _, item := range list.Items {
-		// Only trigger Reconcile if this specific CR references this ConfigMap
-		if item.Spec.SkillConfigRef.Name == configMap.Name {
+		if item.Spec.SkillConfigRef.Name == configMap.Name ||
+			(item.Spec.MCPConfigRef != nil && item.Spec.MCPConfigRef.Name == configMap.Name) {
 			requests = append(requests, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      item.Name,
