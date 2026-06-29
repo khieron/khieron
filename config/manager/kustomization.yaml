@@ -5,7 +5,7 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/khieron/khieron
-  newTag: v0.1.3-2-g979114b-dirty
+  newTag: v0.1.3-2-g99b2158-dirty
 
 generatorOptions:
   disableNameSuffixHash: true

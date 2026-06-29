@@ -23,11 +23,18 @@ import (
 
 // SkillSpec defines the desired state of Skill.
 type SkillSpec struct {
-	// Skill is the agentic skill that will analyze the Kueue deployment
-	// These skills should be targeted and granular
-	// Add more KueueSkill resources if you need them
+	// Skill is a the name of a multifile ConfigMap of the user defined agentic skill
+	// Skills should be targeted and granular
+	// They should contain at least a SKILL.md and follow the Agent Skills pattern at https://agentskills.io
+	// Add more Skill resources if you need them
 	// +kubebuilder:validation:Required
 	SkillConfigRef corev1.LocalObjectReference `json:"skillconfigref"`
+
+	// MCPConfigRef is an optional reference to a ConfigMap containing MCP server
+	// configuration. The ConfigMap must contain a key "mcp.json" with server
+	// definitions in Claude Code .mcp.json format.
+	// +optional
+	MCPConfigRef *corev1.LocalObjectReference `json:"mcpconfigref,omitempty"`
 
 	// The analysis will run periodically at this interval, or on a change of spec
 	// +kubebuilder:default:=5

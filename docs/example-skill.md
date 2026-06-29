@@ -19,12 +19,6 @@ cd <my folder>
 helm create monitor-pods-skill --starter $KHIERON_LOCATION/skill-helm-chart-template
 ```
 
-Change the name of the Skill in `values.yaml` to match the name given above e.g.:
-
-```bash
-sed -i 's/my-skill/monitor-pods-skill/g' monitor-pods-skill/values.yaml
-```
-
 This will create a new folder with placeholder files:
 
 ```
@@ -38,6 +32,7 @@ monitor-pods-skill
 │   └── SKILL.md
 ├── templates
 │   ├── configmap.yaml
+│   ├── mcpconfig.yaml
 │   ├── _helpers.tpl
 │   ├── rolebinding.yaml
 │   ├── role.yaml

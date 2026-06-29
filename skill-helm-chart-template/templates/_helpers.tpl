@@ -1,5 +1,5 @@
 {{- define "skill.name" -}}
-{{- .Values.skill.name }}
+{{- default .Chart.Name .Values.skill.name }}
 {{- end }}
 
 {{- define "skill.labels" -}}

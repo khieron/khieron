@@ -53,6 +53,8 @@ type AgentEntry struct {
 	SessionService session.Service
 	SkillDir       string // temp dir to clean up on refresh
 	ConfigMapRV    string // ConfigMap resource version for change detection
+	MCPConfigMapRV string // MCP ConfigMap resource version for change detection
+	MCPCleanup     func() // called on deregister/replace to clean up MCP connections
 	Interval       time.Duration
 	CRKey          types.NamespacedName
 }
@@ -100,10 +102,14 @@ func (l *AgentRunnerLoop) Register(key string, entry *AgentEntry) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// Clean up old skill dir if replacing an existing entry
-	if old, exists := l.agents[key]; exists && old.SkillDir != entry.SkillDir {
-		// Best effort cleanup - don't block on errors
-		_ = removeSkillDir(old.SkillDir)
+	// Clean up old entry if replacing
+	if old, exists := l.agents[key]; exists {
+		if old.SkillDir != entry.SkillDir {
+			_ = removeSkillDir(old.SkillDir)
+		}
+		if old.MCPCleanup != nil {
+			old.MCPCleanup()
+		}
 	}
 
 	l.agents[key] = entry
@@ -130,6 +136,9 @@ func (l *AgentRunnerLoop) Deregister(key string) {
 
 	if old, exists := l.agents[key]; exists {
 		_ = removeSkillDir(old.SkillDir)
+		if old.MCPCleanup != nil {
+			old.MCPCleanup()
+		}
 		delete(l.agents, key)
 	}
 }
@@ -141,6 +150,17 @@ func (l *AgentRunnerLoop) GetConfigMapRV(key string) (string, bool) {
 
 	if entry, exists := l.agents[key]; exists {
 		return entry.ConfigMapRV, true
+	}
+	return "", false
+}
+
+// GetMCPConfigMapRV returns the cached MCP ConfigMap resource version for a given CR key.
+func (l *AgentRunnerLoop) GetMCPConfigMapRV(key string) (string, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	if entry, exists := l.agents[key]; exists {
+		return entry.MCPConfigMapRV, true
 	}
 	return "", false
 }
@@ -472,6 +492,9 @@ func (l *AgentRunnerLoop) cleanupAll() {
 
 	for _, entry := range l.agents {
 		_ = removeSkillDir(entry.SkillDir)
+		if entry.MCPCleanup != nil {
+			entry.MCPCleanup()
+		}
 	}
 }
 

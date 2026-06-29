@@ -8,5 +8,9 @@ metadata:
 spec:
   skillconfigref:
     name: {{ include "skill.name" . | quote }}
+  {{ if and .Values.mcpConfig .Values.mcpConfig.mcpJson }}
+  mcpconfigref:
+    name: {{ include "skill.name" . }}-mcp-json
+  {{ end }}
   intervalminute: {{ .Values.skill.intervalMinute }}
   enableagent: {{ .Values.skill.enableAgent }}
