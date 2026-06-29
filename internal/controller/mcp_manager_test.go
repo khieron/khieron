@@ -28,6 +28,8 @@ import (
 	"google.golang.org/adk/tool/mcptoolset"
 )
 
+const testBadServerName = "bad"
+
 type WeatherInput struct {
 	City string `json:"city" jsonschema:"city name"`
 }
@@ -167,7 +169,7 @@ var _ = Describe("MCP Manager", func() {
 		It("should return error for stdio server without command", func() {
 			config := &MCPConfig{
 				MCPServers: map[string]MCPServerConfig{
-					"bad": {Type: "stdio"},
+					testBadServerName: {Type: "stdio"},
 				},
 			}
 			_, _, err := CreateToolsets(config, nil)
@@ -178,7 +180,7 @@ var _ = Describe("MCP Manager", func() {
 		It("should return error for HTTP server without URL", func() {
 			config := &MCPConfig{
 				MCPServers: map[string]MCPServerConfig{
-					"bad": {Type: "http"},
+					testBadServerName: {Type: "http"},
 				},
 			}
 			_, _, err := CreateToolsets(config, nil)
@@ -189,7 +191,7 @@ var _ = Describe("MCP Manager", func() {
 		It("should return error for unsupported server type", func() {
 			config := &MCPConfig{
 				MCPServers: map[string]MCPServerConfig{
-					"bad": {Type: "websocket"},
+					testBadServerName: {Type: "websocket"},
 				},
 			}
 			_, _, err := CreateToolsets(config, nil)

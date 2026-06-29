@@ -366,20 +366,7 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	// Check if the cached agent is still valid (neither ConfigMap has changed)
-	skillRVMatch := false
-	mcpRVMatch := false
-	if cachedRV, exists := r.RunnerLoop.GetConfigMapRV(crKey); exists && cachedRV == configMap.ResourceVersion {
-		skillRVMatch = true
-	}
-	if mcpConfigMap == nil {
-		cachedMCPRV, exists := r.RunnerLoop.GetMCPConfigMapRV(crKey)
-		mcpRVMatch = !exists || cachedMCPRV == ""
-	} else {
-		if cachedMCPRV, exists := r.RunnerLoop.GetMCPConfigMapRV(crKey); exists && cachedMCPRV == mcpConfigMap.ResourceVersion {
-			mcpRVMatch = true
-		}
-	}
-	if skillRVMatch && mcpRVMatch {
+	if r.isAgentCacheValid(crKey, configMap.ResourceVersion, mcpConfigMap) {
 		if _, hasRunRequest := skillCr.Annotations[RunRequestedAnnotation]; hasRunRequest {
 			r.RunnerLoop.Notify()
 		}
@@ -524,6 +511,21 @@ func (r *SkillReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	log.Info("Agent registered with runner loop", "cr", crKey)
 
 	return ctrl.Result{}, nil
+}
+
+// isAgentCacheValid checks whether the cached agent for the given CR key is
+// still up to date by comparing ConfigMap resource versions.
+func (r *SkillReconciler) isAgentCacheValid(crKey string, configMapRV string, mcpConfigMap *corev1.ConfigMap) bool {
+	cachedRV, exists := r.RunnerLoop.GetConfigMapRV(crKey)
+	if !exists || cachedRV != configMapRV {
+		return false
+	}
+	if mcpConfigMap == nil {
+		cachedMCPRV, mcpExists := r.RunnerLoop.GetMCPConfigMapRV(crKey)
+		return !mcpExists || cachedMCPRV == ""
+	}
+	cachedMCPRV, mcpExists := r.RunnerLoop.GetMCPConfigMapRV(crKey)
+	return mcpExists && cachedMCPRV == mcpConfigMap.ResourceVersion
 }
 
 // SetupWithManager sets up the controller with the Manager.
