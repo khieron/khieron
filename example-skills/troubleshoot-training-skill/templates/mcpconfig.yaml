@@ -1,0 +1,10 @@
+{{ if and .Values.mcpConfig .Values.mcpConfig.mcpJson }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "skill.name" . }}-mcp-json
+  labels:
+    {{- include "skill.labels" . | nindent 4 }}
+data:
+  mcp.json: {{ .Values.mcpConfig.mcpJson | toJson | quote }}
+{{ end }}

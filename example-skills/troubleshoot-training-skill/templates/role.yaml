@@ -1,0 +1,7 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "skill.name" . }}
+  labels:
+    {{- include "skill.labels" . | nindent 4 }}
+rules: [] # Add rules relevant to the access required in scripts
