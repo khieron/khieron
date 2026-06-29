@@ -35,14 +35,6 @@ content = re.sub(
     flags=re.DOTALL
 )
 
-# Wrap the MLFLOW_EXPERIMENT_ID env block in a conditional
-content = re.sub(
-    r'( +)(- name: MLFLOW_EXPERIMENT_ID\n\s+value: .*?\}\})\n',
-    r'\1{{- if .Values.controllerManager.manager.env.mlflowExperimentId }}\n\1\2\n\1{{- end }}\n',
-    content,
-    flags=re.DOTALL
-)
-
 with open(DEPLOYMENT_FILE, 'w') as f:
     f.write(content)
 
