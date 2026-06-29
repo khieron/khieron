@@ -43,7 +43,6 @@ controllerManager:
         - ALL
     env:
       googleApplicationCredentials: /var/secrets/google/key.json
-      mlflowExperimentId: ""
       otelExporterOtlpEndpoint: ""
     image:
       repository: ghcr.io/khieron/khieron

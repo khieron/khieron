@@ -153,7 +153,11 @@ func main() {
 		}
 
 		var lp *sdklog.LoggerProvider
-		if !isMlflow {
+		if isMlflow {
+			// Pass a no-op LoggerProvider to prevent the ADK from auto-creating
+			// an OTLP log exporter (MLflow does not support /v1/logs).
+			lp = sdklog.NewLoggerProvider()
+		} else {
 			logExporter, err := otlploghttp.New(ctx)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to create OTLP log exporter: %v\n", err)
@@ -163,8 +167,8 @@ func main() {
 				sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
 				sdklog.WithResource(res),
 			)
-			telOpts = append(telOpts, telemetry.WithLoggerProvider(lp))
 		}
+		telOpts = append(telOpts, telemetry.WithLoggerProvider(lp))
 
 		telemetryProviders, err := telemetry.New(ctx, telOpts...)
 		if err != nil {
@@ -180,7 +184,7 @@ func main() {
 			}
 		}()
 
-		if lp != nil {
+		if !isMlflow {
 			otelWrapCore = zap.WrapCore(func(stdout zapcore.Core) zapcore.Core {
 				return zapcore.NewTee(stdout, otelzap.NewCore("khieron", otelzap.WithLoggerProvider(lp)))
 			})
