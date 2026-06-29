@@ -147,10 +147,11 @@ func main() {
 			sdktrace.WithResource(res),
 		)
 
-		telOpts := []telemetry.Option{
+		telOpts := make([]telemetry.Option, 0, 3)
+		telOpts = append(telOpts,
 			telemetry.WithTracerProvider(tp),
 			telemetry.WithGenAICaptureMessageContent(true),
-		}
+		)
 
 		var lp *sdklog.LoggerProvider
 		if isMlflow {
