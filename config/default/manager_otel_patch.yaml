@@ -12,8 +12,3 @@
   value:
     name: OTEL_EXPORTER_OTLP_ENDPOINT
     value: ""
-- op: add
-  path: /spec/template/spec/containers/0/env/-
-  value:
-    name: MLFLOW_EXPERIMENT_ID
-    value: ""

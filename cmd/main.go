@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -122,22 +123,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Initializing OpenTelemetry, endpoint=%s\n", endpoint)
 		ctx := context.Background()
 
-		var traceExporterOpts []otlptracehttp.Option
-		var logExporterOpts []otlploghttp.Option
-		if expID := os.Getenv("MLFLOW_EXPERIMENT_ID"); expID != "" {
-			headers := map[string]string{"x-mlflow-experiment-id": expID}
-			traceExporterOpts = append(traceExporterOpts, otlptracehttp.WithHeaders(headers))
-			logExporterOpts = append(logExporterOpts, otlploghttp.WithHeaders(headers))
-		}
+		isMlflow := strings.Contains(strings.ToLower(os.Getenv("OTEL_EXPORTER_OTLP_HEADERS")), "x-mlflow-experiment-id")
 
-		traceExporter, err := otlptracehttp.New(ctx, traceExporterOpts...)
+		traceExporter, err := otlptracehttp.New(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create OTLP trace exporter: %v\n", err)
-			os.Exit(1)
-		}
-		logExporter, err := otlploghttp.New(ctx, logExporterOpts...)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to create OTLP log exporter: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -156,16 +146,32 @@ func main() {
 			sdktrace.WithBatcher(traceExporter),
 			sdktrace.WithResource(res),
 		)
-		lp := sdklog.NewLoggerProvider(
-			sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
-			sdklog.WithResource(res),
-		)
 
-		telemetryProviders, err := telemetry.New(ctx,
+		telOpts := make([]telemetry.Option, 0, 3)
+		telOpts = append(telOpts,
 			telemetry.WithTracerProvider(tp),
-			telemetry.WithLoggerProvider(lp),
 			telemetry.WithGenAICaptureMessageContent(true),
 		)
+
+		var lp *sdklog.LoggerProvider
+		if isMlflow {
+			// Pass a no-op LoggerProvider to prevent the ADK from auto-creating
+			// an OTLP log exporter (MLflow does not support /v1/logs).
+			lp = sdklog.NewLoggerProvider()
+		} else {
+			logExporter, err := otlploghttp.New(ctx)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to create OTLP log exporter: %v\n", err)
+				os.Exit(1)
+			}
+			lp = sdklog.NewLoggerProvider(
+				sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
+				sdklog.WithResource(res),
+			)
+		}
+		telOpts = append(telOpts, telemetry.WithLoggerProvider(lp))
+
+		telemetryProviders, err := telemetry.New(ctx, telOpts...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to initialize ADK telemetry: %v\n", err)
 			os.Exit(1)
@@ -179,9 +185,11 @@ func main() {
 			}
 		}()
 
-		otelWrapCore = zap.WrapCore(func(stdout zapcore.Core) zapcore.Core {
-			return zapcore.NewTee(stdout, otelzap.NewCore("khieron", otelzap.WithLoggerProvider(lp)))
-		})
+		if !isMlflow {
+			otelWrapCore = zap.WrapCore(func(stdout zapcore.Core) zapcore.Core {
+				return zapcore.NewTee(stdout, otelzap.NewCore("khieron", otelzap.WithLoggerProvider(lp)))
+			})
+		}
 	}
 
 	loggerOpts := []crzap.Opts{crzap.UseFlagOptions(&zapOpts)}
