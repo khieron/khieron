@@ -7,5 +7,3 @@ metadata:
 data:
   instruction.txt: {{ .Values.agentInstruction.instructionTxt | toYaml | indent 1
     }}
-  self-management-template.json: {{ .Values.agentInstruction.selfManagementTemplateJson
-    | toYaml | indent 1 }}
