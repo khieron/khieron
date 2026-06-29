@@ -1,0 +1,16 @@
+---
+apiVersion: agency.khieron.io/v1alpha1
+kind: Skill
+metadata:
+  name: {{ include "skill.name" . }}
+  labels:
+    {{- include "skill.labels" . | nindent 4 }}
+spec:
+  skillconfigref:
+    name: {{ include "skill.name" . | quote }}
+  {{ if and .Values.mcpConfig .Values.mcpConfig.mcpJson }}
+  mcpconfigref:
+    name: {{ include "skill.name" . }}-mcp-json
+  {{ end }}
+  intervalminute: {{ .Values.skill.intervalMinute }}
+  enableagent: {{ .Values.skill.enableAgent }}
