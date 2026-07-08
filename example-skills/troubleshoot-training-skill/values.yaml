@@ -9,9 +9,8 @@ mcpConfig:
   mcpJson: {
     "mcpServers": {
       "rhoai": {
-      "type": "http",
-      "url": "http://rhoai-mcp.rhoai-mcp.svc.cluster.local:8000/mcp",
-      "name": "rhoai-mcp",
+        "type": "http",
+        "url": "http://rhoai-mcp:8000/mcp"
       }
     }
   }
