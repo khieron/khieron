@@ -1,6 +1,6 @@
 ---
 skill:
-  intervalMinute: 5
+  intervalMinute: 1
   enableAgent: true
 serviceAccount:
   name: khieron-controller-manager

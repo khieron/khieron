@@ -81,14 +81,14 @@ For each issue identified in Steps 2 and 3, decide whether it warrants an Adviso
 - The issue is unlikely to resolve itself (e.g., a loss plateau will not fix itself; a transient scheduling delay might).
 - The issue has a concrete remediation that a human can approve.
 
-Use the `load_skill_resource` tool to load `assets/training-health-advisory.json`.
+Use the `load_skill_resource` tool to load `assets/advisory-template.json`.
 
 Copy the template fields over to the advisory, replacing placeholder fields with specific details:
-- `{job_name}`: The name of the affected training job.
-- `{namespace}`: The namespace of the training job.
-- `{issue_type}`: A short label for the issue (e.g., "loss-plateau", "low-gpu-utilization", "no-checkpoints", "oom-failure").
-- `{explaination}`: A clear explanation of what was detected, including specific metric values (e.g., "Loss has been stable at 1.42 for the last 3 epochs with no improvement").
-- `{proposal}`: A concrete action to resolve the issue (e.g., "Suspend the training job to conserve GPU resources and consider reducing the learning rate before resuming").
+- `<job_name>`: The name of the affected training job.
+- `<namespace>`: The namespace of the training job.
+- `<issue_type>`: A short label for the issue (e.g., "loss-plateau", "low-gpu-utilization", "no-checkpoints", "oom-failure").
+- `<explaination>`: A clear explanation of what was detected, including specific metric values (e.g., "Loss has been stable at 1.42 for the last 3 epochs with no improvement").
+- `<proposal>`: A concrete action to resolve the issue (e.g., "Suspend the training job to conserve GPU resources and consider reducing the learning rate before resuming").
 
 Then use the `create_advisory` internal tool with the filled-in fields to create the Advisory CR.
 
