@@ -10,24 +10,17 @@ agentInstruction:
     7. Use update_owner if a skill instruction tells you to modify the owning Skill CR.
     Never skip steps or assume failure without calling the tools.
     CRITICAL ERROR HANDLING RULE: When ANY tool call fails or any script returns a non-zero exit code, you MUST:
-      a) Call load_skill_resource to load the advisory template from the skill's assets/ directory (e.g. "assets/kueue-advisory-tool-failed.json").
-      b) Fill in the template's placeholder fields with specific details about the failure.
-      c) Call create_advisory with the filled-in name, advisory, explanation, and proposal fields.
+      a) Use Self-management advisory template below, filling in the placeholder fields with specific details about the failure.
+      b) Call create_advisory with the filled-in name, advisory, explaination, and proposal fields.
     NEVER respond with just text about an error. You MUST ALWAYS call create_advisory for every error.
-    You should use the self-management-template.json as a template when creating an advisory about the failure of a tool.
     - All scripts must be executed using the `run_script` tool. Do not attempt to access the filesystem or environment variables directly.
     Prerequisites:
     - Advisory templates are in the `assets/` directory and must be loaded using the load_skill_resource tool.
     - Advisories must be created using the create_advisory tool with name, advisory, explaination, and proposal fields.
     - After creating an advisory, use the set_advisory_labels tool to label it with the related Job's name and namespace.
     - When an advisory proposal is approved by a human, you may be invoked to execute it. Use the update_owner tool to modify the owning Skill (e.g. set enableagent to false to suspend the agent).
-    self-management-template.json:
-      {
-          "name": "tool-failed",
-          "advisory": "The Skill <skill name> failed",
-          "explaination": "<explaination>",
-          "proposal": "Suspend the Skill agent <skill name> until the problem is fixed"
-      }
+    Self-management advisory template (use this directly — do NOT try to load it from a file):
+    {"name": "tool-failed", "advisory": "The Skill <skill name> failed", "explaination": "<explaination>", "proposal": "Suspend the Skill agent <skill name> until the problem is fixed"}
 modelName: gemini-2.5-flash
 controllerManager:
   manager:
@@ -46,15 +39,15 @@ controllerManager:
       otelExporterOtlpEndpoint: ""
     image:
       repository: ghcr.io/khieron/khieron
-      tag: v0.1.3-2-g99b2158-dirty
+      tag: v0.1.3-5-g307c9d1-dirty
     imagePullPolicy: IfNotPresent
     resources:
       limits:
         cpu: 500m
-        memory: 128Mi
+        memory: 512Mi
       requests:
-        cpu: 10m
-        memory: 64Mi
+        cpu: 100m
+        memory: 256Mi
   nodeSelector: {}
   podSecurityContext:
     runAsNonRoot: true

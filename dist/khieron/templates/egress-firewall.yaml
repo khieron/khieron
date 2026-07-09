@@ -7,9 +7,13 @@ metadata:
   {{- include "khieron.labels" . | nindent 4 }}
 spec:
   egress:
+  {{- if .Values.egressFirewall.allowedDnsNames }}
+  {{- range .Values.egressFirewall.allowedDnsNames }}
   - to:
-      dnsName: {{ .Values.egressFirewall.modelDnsName}}
+      dnsName: {{ . }}
     type: Allow
+  {{- end }}
+  {{- end }}
   - to:
       cidrSelector: {{ .Values.egressFirewall.clusterCIDR }}
     type: Allow

@@ -90,7 +90,7 @@ jobs:
 
       - name: Generate Helm chart
         run: |
-          echo "GOOGLE_API_KEY=" > config/default/google-api-key.env
+          printf 'GOOGLE_API_KEY=\nGOOGLE_CLOUD_PROJECT=\nGOOGLE_CLOUD_LOCATION=global\n' > config/default/google-api-key.env
           echo OTEL_EXPORTER_OTLP_HEADERS= > config/default/otel-headers.env
           make helm-chart
 
