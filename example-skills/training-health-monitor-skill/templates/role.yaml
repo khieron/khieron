@@ -4,4 +4,11 @@ metadata:
   name: {{ include "skill.name" . }}
   labels:
     {{- include "skill.labels" . | nindent 4 }}
-rules: [] # Add rules relevant to the access required in scripts
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list

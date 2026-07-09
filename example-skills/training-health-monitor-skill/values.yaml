@@ -3,7 +3,7 @@ skill:
   intervalMinute: 1
   enableAgent: true
 serviceAccount:
-  name: khieron-controller-manager
+  name: khieron
   namespace: khieron-system
 mcpConfig:
   mcpJson: {
