@@ -128,17 +128,23 @@ func main() {
 
 		if tokenBytes, err := os.ReadFile(saTokenPath); err == nil {
 			authHeader := "Authorization=Bearer " + strings.TrimSpace(string(tokenBytes))
+			headerVal := authHeader
 			if existing := os.Getenv("OTEL_EXPORTER_OTLP_HEADERS"); existing != "" {
-				os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", existing+","+authHeader)
-			} else {
-				os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", authHeader)
+				headerVal = existing + "," + authHeader
 			}
-			fmt.Fprintf(os.Stderr, "Injected bearer token from %s into OTEL headers\n", saTokenPath)
+			if err := os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", headerVal); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to set OTEL_EXPORTER_OTLP_HEADERS: %v\n", err)
+			} else {
+				fmt.Fprintf(os.Stderr, "Injected bearer token from %s into OTEL headers\n", saTokenPath)
+			}
 		}
 
 		if _, err := os.Stat(saCertPath); err == nil {
-			os.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", saCertPath)
-			fmt.Fprintf(os.Stderr, "Using service CA certificate from %s\n", saCertPath)
+			if err := os.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", saCertPath); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to set OTEL_EXPORTER_OTLP_CERTIFICATE: %v\n", err)
+			} else {
+				fmt.Fprintf(os.Stderr, "Using service CA certificate from %s\n", saCertPath)
+			}
 		}
 
 		isMlflow := strings.Contains(strings.ToLower(os.Getenv("OTEL_EXPORTER_OTLP_HEADERS")), "x-mlflow-experiment-id")
