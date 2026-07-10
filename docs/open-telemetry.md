@@ -27,7 +27,9 @@ There are 2 configuration parameters passed in through environment variables:
     * Example: `x-mlflow-experiment-id=0` (necessary for MLFlow)
       * The value must be numeric, and the experiment must already exist in MLFlow
       * When this header is present, log export is automatically disabled
+    * Example: `x-mlflow-workspace=khieron-system` (necessary for MLFlow on OpenShift where workspaces are enabled)
   * With the Helm chart this value may be set with `otelHeadersSecret.otelExporterOtlpHeaders`
+    * when using the `--set` syntax with Helm and more than 1 header needs to be set seperate them with a `\,` (an escaped comma). 
 
 ## Examples
 
@@ -54,3 +56,21 @@ helm -n khieron-system install --create-namespace khieron oci://ghcr.io/khieron/
 ```
 
 > OpenObserve provides both Logs and Traces
+
+### Openshift MLFlow
+
+First enable the MLflow operator and create an mflow instance in `redhat-ods-applications` namespace. In the MLFlow UI create 
+
+Then then using the RHOAI dashboard (Develop & Train -> Experiments) create an
+experiment in the `khieron-system` Project (namespace).
+
+The experiment ID (integer) can be got from the information button next to the experiment name or in the URL of the page. Use this to configure Khieron 
+
+```bash
+MLFLOW_EXPERIMENT_ID=1 # check your value. see notes
+MLFLOW_WORKSPACE=khieron-system
+helm -n khieron-system upgrade khieron oci://ghcr.io/khieron/charts/khieron -f dist/khieron/values-openshift.yaml \
+--set googleApiKeySecret.googleApiKey=$GOOGLE_API_KEY \
+--set controllerManager.manager.env.otelExporterOtlpEndpoint=https://mlflow.redhat-ods-applications.svc.cluster.local:8443 \
+--set otelHeadersSecret.otelExporterOtlpHeaders="x-mlflow-experiment-id=$MLFLOW_EXPERIMENT_ID\,x-mlflow-workspace=$MLFLOW_WORKSPACE"
+```

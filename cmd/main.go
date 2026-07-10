@@ -123,6 +123,24 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Initializing OpenTelemetry, endpoint=%s\n", endpoint)
 		ctx := context.Background()
 
+		const saTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+		const saCertPath = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+
+		if tokenBytes, err := os.ReadFile(saTokenPath); err == nil {
+			authHeader := "Authorization=Bearer " + strings.TrimSpace(string(tokenBytes))
+			if existing := os.Getenv("OTEL_EXPORTER_OTLP_HEADERS"); existing != "" {
+				os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", existing+","+authHeader)
+			} else {
+				os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", authHeader)
+			}
+			fmt.Fprintf(os.Stderr, "Injected bearer token from %s into OTEL headers\n", saTokenPath)
+		}
+
+		if _, err := os.Stat(saCertPath); err == nil {
+			os.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", saCertPath)
+			fmt.Fprintf(os.Stderr, "Using service CA certificate from %s\n", saCertPath)
+		}
+
 		isMlflow := strings.Contains(strings.ToLower(os.Getenv("OTEL_EXPORTER_OTLP_HEADERS")), "x-mlflow-experiment-id")
 
 		traceExporter, err := otlptracehttp.New(ctx)
