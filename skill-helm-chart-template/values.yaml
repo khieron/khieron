@@ -6,3 +6,7 @@ serviceAccount:
   name: khieron-controller-manager
   namespace: khieron-system
 mcpConfig: {}
+extraFiles: {}
+# load some extra context in to the skill at deploy time.
+# Add this to an override.values.yaml or use --set-file
+# e.g. --set-file 'extraFiles.references___SKILL-CONTEXT\.md=/tmp/SKILL-CONTEXT.md'

@@ -1,9 +1,8 @@
 ---
 skill:
-  name: monitor-pods-skill
   intervalMinute: 5
   enableAgent: true
 serviceAccount:
   name: khieron
   namespace: khieron-system
-
+extraFiles: {}

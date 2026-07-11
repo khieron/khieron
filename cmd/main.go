@@ -19,8 +19,10 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,6 +64,18 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
+
+type tokenRefreshTransport struct {
+	base      http.RoundTripper
+	tokenPath string
+}
+
+func (t *tokenRefreshTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if tokenBytes, err := os.ReadFile(t.tokenPath); err == nil {
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(string(tokenBytes)))
+	}
+	return t.base.RoundTrip(req)
+}
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -126,30 +140,28 @@ func main() {
 		const saTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 		const saCertPath = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
 
-		if tokenBytes, err := os.ReadFile(saTokenPath); err == nil {
-			authHeader := "Authorization=Bearer " + strings.TrimSpace(string(tokenBytes))
-			headerVal := authHeader
-			if existing := os.Getenv("OTEL_EXPORTER_OTLP_HEADERS"); existing != "" {
-				headerVal = existing + "," + authHeader
-			}
-			if err := os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", headerVal); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to set OTEL_EXPORTER_OTLP_HEADERS: %v\n", err)
-			} else {
-				fmt.Fprintf(os.Stderr, "Injected bearer token from %s into OTEL headers\n", saTokenPath)
-			}
-		}
-
-		if _, err := os.Stat(saCertPath); err == nil {
-			if err := os.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", saCertPath); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to set OTEL_EXPORTER_OTLP_CERTIFICATE: %v\n", err)
-			} else {
-				fmt.Fprintf(os.Stderr, "Using service CA certificate from %s\n", saCertPath)
-			}
-		}
-
 		isMlflow := strings.Contains(strings.ToLower(os.Getenv("OTEL_EXPORTER_OTLP_HEADERS")), "x-mlflow-experiment-id")
 
-		traceExporter, err := otlptracehttp.New(ctx)
+		var otelHTTPClient *http.Client
+		if _, err := os.Stat(saTokenPath); err == nil {
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			if caCert, err := os.ReadFile(saCertPath); err == nil {
+				pool := x509.NewCertPool()
+				pool.AppendCertsFromPEM(caCert)
+				transport.TLSClientConfig = &tls.Config{RootCAs: pool}
+				fmt.Fprintf(os.Stderr, "Using service CA certificate from %s\n", saCertPath)
+			}
+			otelHTTPClient = &http.Client{
+				Transport: &tokenRefreshTransport{base: transport, tokenPath: saTokenPath},
+			}
+			fmt.Fprintf(os.Stderr, "Configured dynamic bearer token refresh from %s\n", saTokenPath)
+		}
+
+		var traceOpts []otlptracehttp.Option
+		if otelHTTPClient != nil {
+			traceOpts = append(traceOpts, otlptracehttp.WithHTTPClient(otelHTTPClient))
+		}
+		traceExporter, err := otlptracehttp.New(ctx, traceOpts...)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create OTLP trace exporter: %v\n", err)
 			os.Exit(1)
@@ -183,7 +195,11 @@ func main() {
 			// an OTLP log exporter (MLflow does not support /v1/logs).
 			lp = sdklog.NewLoggerProvider()
 		} else {
-			logExporter, err := otlploghttp.New(ctx)
+			var logOpts []otlploghttp.Option
+			if otelHTTPClient != nil {
+				logOpts = append(logOpts, otlploghttp.WithHTTPClient(otelHTTPClient))
+			}
+			logExporter, err := otlploghttp.New(ctx, logOpts...)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to create OTLP log exporter: %v\n", err)
 				os.Exit(1)
