@@ -11,3 +11,7 @@ data:
   {{ printf "%s___%s" $skillName ($relPath | replace "/" "___") }}: |
 {{ $.Files.Get $path | indent 4 }}
   {{- end }}
+  {{- range $name, $content := .Values.extraFiles }}
+  {{ printf "%s___%s" $skillName ($name | replace "/" "___") }}: |
+{{ $content | indent 4 }}
+  {{- end }}
