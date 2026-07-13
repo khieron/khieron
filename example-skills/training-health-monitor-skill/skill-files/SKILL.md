@@ -18,13 +18,13 @@ You MUST execute all steps below using the available tools. Do NOT ask for confi
 
 Use the rhoai-mcp `list_training_jobs` tool to get all training jobs across namespaces. Use verbosity "standard" to get status information.
 
-If no training jobs are found, report that there are no training jobs to monitor and stop.
+**IMPORTANT — If there are NO training jobs, you are DONE. Report that no training jobs were found and STOP immediately. Do NOT proceed to any further steps. Do NOT run any scripts. Do NOT load any templates.**
 
-Categorize the jobs by status:
+If training jobs ARE found, categorize them by status:
 - **Running** jobs proceed to Step 2 for health checks.
 - **Failed** jobs proceed to Step 3 for failure analysis.
-- **Completed** jobs can be skipped.
-- **Suspended** jobs can be skipped.
+- **Completed** jobs — skip entirely.
+- **Suspended** jobs — skip entirely.
 
 ## Step 2: Health check each running training job
 

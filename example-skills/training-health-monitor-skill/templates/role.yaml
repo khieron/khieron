@@ -12,3 +12,18 @@ rules:
   verbs:
   - get
   - list
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - trainer.kubeflow.org
+  resources:
+  - trainjobs
+  verbs:
+  - get
+  - list
+  - delete
