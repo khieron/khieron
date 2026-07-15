@@ -1,0 +1,17 @@
+---
+skill:
+  intervalMinute: 1
+  enableAgent: true
+serviceAccount:
+  name: khieron
+  namespace: khieron-system
+mcpConfig:
+  mcpJson: {
+    "mcpServers": {
+      "rhoai": {
+        "type": "http",
+        "url": "http://rhoai-mcp:8000/mcp"
+      }
+    }
+  }
+extraFiles: {}

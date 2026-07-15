@@ -6,6 +6,9 @@ egressFirewall:
     - aiplatform.googleapis.com
     - oauth2.googleapis.com
     - generativelanguage.googleapis.com
+    - ghcr.io
+    - containers.githubusercontent.com
+    - pkg-containers.githubusercontent.com
   clusterCIDR: 10.128.0.0/14 # oc get network.config cluster -o jsonpath='{.status.clusterNetwork}{"\n"}'
   serviceCIDR: 172.30.0.0/16 # oc get network.config cluster -o jsonpath='{.status.serviceNetwork}{"\n"}'
   nodeNetworkCIDR: 10.242.0.0/16 # the OVN post-DNAT range - should contain the actual node addresses

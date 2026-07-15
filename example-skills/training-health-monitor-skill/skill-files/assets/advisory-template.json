@@ -1,0 +1,6 @@
+{
+    "name": "training-health-<job_name>-<issue_type>",
+    "advisory": "Training health issue detected for job <job_name> in namespace <namespace>: <issue_type>",
+    "explaination": "<explaination>",
+    "proposal": "<proposal>"
+}

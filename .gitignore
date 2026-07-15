@@ -33,3 +33,4 @@ config/default/vertex-ai-svc-acct-gcp.json
 main
 .mcp.json
 .claude
+*.tgz
