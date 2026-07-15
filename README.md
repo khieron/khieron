@@ -91,6 +91,20 @@ On Openshift, the deployment uses an Egress Firewall to prevent tools from acces
 
 Through the ADK, the agent is able to export OpenTelemetry Traces and Logs. See [OpenTelemetry Guide](./docs/open-telemetry.md) for configuration details.
 
+### Comparison to other Kubernetes Agentic Frameworks
+
+Sometimes Khieron is compared to other Agentic Frameworks designed for the Kubernetes platform.
+
+* [KAgent](https://kagent.dev/) - This is the closest to Khieron in that it too has CRDs than deploy Agents at the namespace level
+  * See this comparison between the 2 [Khieron vs KAgent](./docs/khieron-vs-kagent.md)
+* [Kagenti](https://kagenti.github.io/.github/) (being renamed as Rosso)
+  * It is focussed on enterprise agents across many domains, not suitable or focussed on SRE
+  * It is not lightweight
+* [Holmes GPT](https://github.com/HolmesGPT/holmesgpt) - is an AI agent that automates cloud-native troubleshooting, bridging knowledge gaps by investigating alerts, executing runbooks, and correlating observability data in cloud-native platforms.
+  * It is a CNCF sandbox project.
+  * It is a general puprose SRE agent, not targetted to specific tasks like Khieron
+  * It is not light weight like Khieron is.
+
 ### Non goals
 
 Khieron does not intend to be a comprehensive Agentic framework and is not designed to create a
