@@ -3,4 +3,4 @@ appVersion: 0.1.0
 description: A Khieron skill that monitors the health and performance of RHOAI training jobs
 name: training-health-monitor-skill
 type: application
-version: 0.1.1
+version: 0.1.2
