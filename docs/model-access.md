@@ -2,12 +2,13 @@
 
 Currently only Google models can be used with the **Go** version of ADK. This is down to the choices provided in the Go ADK implemntation at [https://github.com/google/adk-go/tree/main/model](https://github.com/google/adk-go/tree/main/model). This may be expanded in future.
 
-The models cn be accessed in 2 ways:
+The models cn be accessed in 3 ways:
 
-* With a GOOGLE_API_KEY or
-* with a Google Vertex AI Service Account
+* Gemini API with a GOOGLE_API_KEY or
+* Gemini API with a Google Vertex AI Service Account
+* OpenAI API with an OPENAI_API_KEY and an OPENAI_BASE_URL
 
-## Access with a Google API Key
+## Gemini API Access with a Google API Key
 
 This is the simplest method. If you don't already have Gemini API key, create a key in Google AI Studio on the API Keys page.
 
@@ -23,7 +24,7 @@ helm -n $NAMESPACE install --create-namespace khieron ./dist/khieron/ -f dist/kh
 
 > The default model is `gemini-2.5-flash` and is sufficient for most agent processing.
 
-## Access through Vertex AI
+## Gemini API Access through Vertex AI
 
 Access through Vertex AI may be preferred by some organizations.
 
@@ -72,3 +73,33 @@ The model may be changed through the [values.yaml](../dist/khieron/values.yaml) 
 
 ```--set modelName=gemini-2.5-flash"
 ```
+
+## OpenAI API access
+
+OpenAI access currenly uses the approach from ADK-go branch [openai_support](https://github.com/google/adk-go/tree/openai_support).
+
+> This accesses the Responses API (rather than the older Chat Completions). vLLM deployments of models such as Gemma support this API
+
+### Deploy Khieron
+
+```bash
+OPENAI_BASE_URL=<endpoint url>
+MODEL_NAME=<model name from /v1/models>
+OPENAI_API_KEY=<Your OpenAI API key>
+
+helm -n khieron-system install khieron oci://ghcr.io/khieron/charts/khieron \
+--set modelBackend=openai \
+--set modelName=$MODEL_NAME \
+--set openaiBaseUrl=$OPENAI_BASE_URL \
+--set openaiApiKeySecret.openaiApiKey=$OPENAI_API_KEY
+```
+
+When a model is deployed as a Deployment on OpenShift AI through KServe it will be accessible:
+
+* internally through an Service or
+* externally through a HttpRoute
+
+Internal access is possible where Khieron is deployed on the same cluster as the OpenAI compatible model. It will not require an OPENAI_API_KEY and can use the service name as the URL like `https://<model-name>.<namespace>.svc.cluster.local/v1`
+
+External access is used when the model is deployed externally to the cluster Khieron sits on. It's URL can be found on the Route connected to the model deployment e.g. `https://gemma-4-31b-ls-evals.apps.ocp-gb.ibm.redhataicatalyst.com/v1`. Since this endpoint requires Authentication set the `OPENAI_BASE_URL` to the OpenShift access token.
+> The token for `oc login` will expire after 24 hours, so it is recommended to get a `serviceaccount` token instead.

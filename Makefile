@@ -56,6 +56,10 @@ IMG ?= $(IMAGE_TAG_BASE):$(VERSION)
 EXAMPLE_SKILLS_NAMESPACE ?= example-skills
 # Model name passed to the operator. Override with MODEL_NAME=fake for e2e tests.
 MODEL_NAME ?= gemini-2.5-flash
+# Model backend: gemini or openai (OpenAI-compatible endpoints including vLLM).
+MODEL_BACKEND ?= gemini
+# Base URL for OpenAI-compatible API. Leave empty to use OPENAI_BASE_URL env var.
+OPENAI_BASE_URL ?=
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -224,6 +228,8 @@ helm-chart: manifests generate kustomize helmify ## Generate a Helm chart from k
 	@bash hack/patch-helm-secret.sh
 	@bash hack/patch-helm-deployment-sa-secret.sh
 	@bash hack/patch-helm-model-name.sh
+	@bash hack/patch-helm-openai-config.sh
+	@bash hack/patch-helm-openai-secret.sh
 	@bash hack/patch-helm-otel-headers.sh
 	@bash hack/patch-helm-otel-env.sh
 
@@ -245,10 +251,15 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	sed -i 's/--model-name=.*/--model-name=$(MODEL_NAME)/' config/default/manager_model_patch.yaml
+	sed -i 's/--model-backend=.*/--model-backend=$(MODEL_BACKEND)/' config/default/manager_model_patch.yaml
+ifneq ($(OPENAI_BASE_URL),)
+	sed -i 's|--openai-base-url=.*|--openai-base-url=$(OPENAI_BASE_URL)|' config/default/manager_model_patch.yaml
+endif
 	sed -i '/name: OTEL_EXPORTER_OTLP_ENDPOINT$$/{n;s|value: ".*"|value: "$(OTEL_EXPORTER_OTLP_ENDPOINT)"|;}' config/default/manager_otel_patch.yaml
 	echo "GOOGLE_API_KEY=$(GOOGLE_API_KEY)" > config/default/google-api-key.env
 	echo "GOOGLE_CLOUD_PROJECT=$(GOOGLE_CLOUD_PROJECT)" >> config/default/google-api-key.env
 	echo "GOOGLE_CLOUD_LOCATION=$(GOOGLE_CLOUD_LOCATION)" >> config/default/google-api-key.env
+	echo "OPENAI_API_KEY=$(OPENAI_API_KEY)" > config/default/openai-api-key.env
 	echo "OTEL_EXPORTER_OTLP_HEADERS=$(OTEL_EXPORTER_OTLP_HEADERS)" > config/default/otel-headers.env
 
 	@bash hack/setup-gcp-sa-secret.sh > /dev/null
@@ -257,6 +268,7 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	echo "GOOGLE_API_KEY=" > config/default/google-api-key.env ; \
 	echo "GOOGLE_CLOUD_PROJECT=" >> config/default/google-api-key.env ; \
 	echo "GOOGLE_CLOUD_LOCATION=global" >> config/default/google-api-key.env ; \
+	echo "OPENAI_API_KEY=" > config/default/openai-api-key.env ; \
 	echo "OTEL_EXPORTER_OTLP_HEADERS=" > config/default/otel-headers.env ; \
 	exit $$status
 	$(MAKE) deploy-example-skills

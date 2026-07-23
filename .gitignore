@@ -28,6 +28,7 @@ go.work
 
 # Secret env files
 config/default/google-api-key.env
+config/default/openai-api-key.env
 config/default/otel-headers.env
 config/default/vertex-ai-svc-acct-gcp.json
 main

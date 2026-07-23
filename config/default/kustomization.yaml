@@ -49,7 +49,7 @@ patches:
 - path: manager_instruction_patch.yaml
   target:
     kind: Deployment
-# [MODEL] Set the Gemini model name for the agent.
+# [MODEL] Set the model name, backend, and OpenAI base URL for the agent.
 - path: manager_model_patch.yaml
   target:
     kind: Deployment
@@ -257,6 +257,9 @@ secretGenerator:
 - name: google-api-key-secret
   envs:
   - google-api-key.env
+- name: openai-api-key-secret
+  envs:
+  - openai-api-key.env
 - name: otel-headers-secret
   envs:
   - otel-headers.env

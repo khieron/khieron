@@ -1,4 +1,10 @@
-# This patch adds the --model-name flag to the controller manager.
+# This patch adds model configuration flags to the controller manager.
 - op: add
   path: /spec/template/spec/containers/0/args/-
   value: --model-name=gemini-2.5-flash
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --model-backend=gemini
+- op: add
+  path: /spec/template/spec/containers/0/args/-
+  value: --openai-base-url=

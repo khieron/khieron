@@ -29,3 +29,9 @@
           optional: true
     - name: GOOGLE_APPLICATION_CREDENTIALS
       value: /var/secrets/google/key.json
+    - name: OPENAI_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: openai-api-key-secret
+          key: OPENAI_API_KEY
+          optional: true

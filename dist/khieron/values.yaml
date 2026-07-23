@@ -22,6 +22,8 @@ agentInstruction:
     Self-management advisory template (use this directly — do NOT try to load it from a file):
     {"name": "tool-failed", "advisory": "The Skill <skill name> failed", "explaination": "<explaination>", "proposal": "Suspend the Skill agent <skill name> until the problem is fixed"}
 modelName: gemini-2.5-flash
+modelBackend: gemini
+openaiBaseUrl: ""
 controllerManager:
   manager:
     args:
@@ -68,6 +70,8 @@ metricsService:
     protocol: TCP
     targetPort: 8443
   type: ClusterIP
+openaiApiKeySecret:
+  openaiApiKey: ""
 otelHeadersSecret:
   otelExporterOtlpHeaders: ""
 serviceAccount:
