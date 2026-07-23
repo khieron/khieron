@@ -52,7 +52,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-	"google.golang.org/adk/telemetry"
+	"google.golang.org/adk/v2/telemetry"
 
 	agencyv1alpha1 "github.com/khieron/khieron/api/v1alpha1"
 	"github.com/khieron/khieron/internal/controller"
@@ -183,10 +183,11 @@ func main() {
 			sdktrace.WithResource(res),
 		)
 
+		// In ADK v2, message content capture is controlled via the
+		// OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT env var.
 		telOpts := make([]telemetry.Option, 0, 3)
 		telOpts = append(telOpts,
 			telemetry.WithTracerProvider(tp),
-			telemetry.WithGenAICaptureMessageContent(true),
 		)
 
 		var lp *sdklog.LoggerProvider

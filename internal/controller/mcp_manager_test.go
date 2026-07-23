@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"google.golang.org/adk/tool/mcptoolset"
+	"google.golang.org/adk/v2/tool/mcptoolset"
 )
 
 const testBadServerName = "bad"
