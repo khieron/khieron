@@ -95,6 +95,8 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var modelName string
+	var modelBackend string
+	var openaiBaseURL string
 	var agentInstructionPath string
 	var tlsOpts []func(*tls.Config)
 	flag.BoolVar(&showVersion, "version", false, "Print version and exit.")
@@ -116,7 +118,11 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.StringVar(&modelName, "model-name", "gemini-2.5-flash-lite",
-		"The Gemini model to use for agent skills.")
+		"The model name to use for agent skills (e.g. gemini-2.5-flash-lite, gpt-4o-mini).")
+	flag.StringVar(&modelBackend, "model-backend", "gemini",
+		"Model backend: gemini or openai (OpenAI-compatible endpoints including vLLM).")
+	flag.StringVar(&openaiBaseURL, "openai-base-url", "",
+		"Base URL for OpenAI-compatible API. Falls back to OPENAI_BASE_URL env var.")
 	flag.StringVar(&agentInstructionPath, "agent-instruction-path", "",
 		"Path to a file containing the agent system instruction. If empty, uses the built-in default.")
 	zapOpts := crzap.Options{
@@ -354,7 +360,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	runnerLoop := controller.NewAgentRunnerLoop(mgr.GetClient(), mgr.GetScheme(), modelName)
+	runnerLoop := controller.NewAgentRunnerLoop(mgr.GetClient(), mgr.GetScheme(), modelName, modelBackend, openaiBaseURL)
 	if err := mgr.Add(runnerLoop); err != nil {
 		setupLog.Error(err, "unable to add agent runner loop to manager")
 		os.Exit(1)
