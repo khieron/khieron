@@ -246,7 +246,7 @@ var _ = Describe("MCP Manager", func() {
 	Describe("AgentEntry MCP lifecycle", func() {
 		It("should call MCPCleanup when deregistering an agent", func() {
 			cleanupCalled := false
-			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake")
+			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake", "gemini", "")
 
 			loop.Register("test/skill", &AgentEntry{
 				MCPCleanup: func() { cleanupCalled = true },
@@ -257,7 +257,7 @@ var _ = Describe("MCP Manager", func() {
 
 		It("should call MCPCleanup when replacing an agent", func() {
 			oldCleanupCalled := false
-			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake")
+			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake", "gemini", "")
 
 			loop.Register("test/skill", &AgentEntry{
 				MCPCleanup: func() { oldCleanupCalled = true },
@@ -270,7 +270,7 @@ var _ = Describe("MCP Manager", func() {
 		})
 
 		It("should return MCP ConfigMap RV when set", func() {
-			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake")
+			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake", "gemini", "")
 
 			loop.Register("test/skill", &AgentEntry{
 				MCPConfigMapRV: "v42",
@@ -281,7 +281,7 @@ var _ = Describe("MCP Manager", func() {
 		})
 
 		It("should return empty MCP ConfigMap RV when not set", func() {
-			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake")
+			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake", "gemini", "")
 
 			_, exists := loop.GetMCPConfigMapRV("nonexistent/skill")
 			Expect(exists).To(BeFalse())

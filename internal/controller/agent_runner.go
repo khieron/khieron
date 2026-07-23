@@ -38,6 +38,7 @@ import (
 	"google.golang.org/adk/v2/agent"
 	"google.golang.org/adk/v2/model"
 	"google.golang.org/adk/v2/model/gemini"
+	"google.golang.org/adk/v2/model/openaimodel"
 	"google.golang.org/adk/v2/runner"
 	"google.golang.org/adk/v2/session"
 	"google.golang.org/genai"
@@ -64,9 +65,11 @@ type AgentRunnerLoop struct {
 	client.Client
 	Scheme *runtime.Scheme
 
-	Model      model.LLM
-	modelName  string
-	modelReady bool
+	Model         model.LLM
+	modelName     string
+	modelBackend  string
+	openaiBaseURL string
+	modelReady    bool
 
 	mu     sync.RWMutex
 	agents map[string]*AgentEntry // keyed by CR namespaced name string
@@ -76,13 +79,15 @@ type AgentRunnerLoop struct {
 }
 
 // NewAgentRunnerLoop creates a new AgentRunnerLoop.
-func NewAgentRunnerLoop(c client.Client, scheme *runtime.Scheme, modelName string) *AgentRunnerLoop {
+func NewAgentRunnerLoop(c client.Client, scheme *runtime.Scheme, modelName, modelBackend, openaiBaseURL string) *AgentRunnerLoop {
 	return &AgentRunnerLoop{
-		Client:    c,
-		Scheme:    scheme,
-		modelName: modelName,
-		agents:    make(map[string]*AgentEntry),
-		notify:    make(chan struct{}, 1),
+		Client:        c,
+		Scheme:        scheme,
+		modelName:     modelName,
+		modelBackend:  modelBackend,
+		openaiBaseURL: openaiBaseURL,
+		agents:        make(map[string]*AgentEntry),
+		notify:        make(chan struct{}, 1),
 	}
 }
 
@@ -459,30 +464,41 @@ func (m *fakeModel) GenerateContent(_ context.Context, _ *model.LLMRequest, _ bo
 	}
 }
 
-// createModel creates the LLM model using either Vertex AI or the Gemini API,
-// depending on environment variables. If the model name is "fake", a no-op
-// stub is returned instead.
+// createModel creates the LLM model for the configured backend.
+// If the model name is "fake", a no-op stub is returned instead.
 func (l *AgentRunnerLoop) createModel(ctx context.Context) (model.LLM, error) {
 	log := logf.FromContext(ctx)
 	if l.modelName == "fake" {
 		log.Info("Using fake model for testing")
 		return &fakeModel{}, nil
 	}
-	project := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	location := os.Getenv("GOOGLE_CLOUD_LOCATION")
-	if project != "" && location != "" {
-		log.Info("Creating model via Vertex AI", "model", l.modelName, "project", project, "location", location)
+
+	switch l.modelBackend {
+	case "openai":
+		cfg := &openaimodel.ClientConfig{}
+		if l.openaiBaseURL != "" {
+			cfg.BaseURL = l.openaiBaseURL
+		}
+		log.Info("Creating model via OpenAI-compatible API", "model", l.modelName, "baseURL", l.openaiBaseURL)
+		return openaimodel.NewModel(ctx, l.modelName, cfg)
+
+	default: // "gemini"
+		project := os.Getenv("GOOGLE_CLOUD_PROJECT")
+		location := os.Getenv("GOOGLE_CLOUD_LOCATION")
+		if project != "" && location != "" {
+			log.Info("Creating model via Vertex AI", "model", l.modelName, "project", project, "location", location)
+			return gemini.NewModel(ctx, l.modelName, &genai.ClientConfig{
+				Backend:  genai.BackendVertexAI,
+				Project:  project,
+				Location: location,
+			})
+		}
+		log.Info("Creating model via Gemini API", "model", l.modelName)
 		return gemini.NewModel(ctx, l.modelName, &genai.ClientConfig{
-			Backend:  genai.BackendVertexAI,
-			Project:  project,
-			Location: location,
+			APIKey:  os.Getenv("GOOGLE_API_KEY"),
+			Backend: genai.BackendGeminiAPI,
 		})
 	}
-	log.Info("Creating model via Gemini API", "model", l.modelName)
-	return gemini.NewModel(ctx, l.modelName, &genai.ClientConfig{
-		APIKey:  os.Getenv("GOOGLE_API_KEY"),
-		Backend: genai.BackendGeminiAPI,
-	})
 }
 
 // cleanupAll removes all cached skill directories on shutdown.

@@ -62,7 +62,7 @@ func createSkillConfigMap(ctx context.Context, name, namespace string) {
 
 // newTestReconciler creates a SkillReconciler with a fake model for testing.
 func newTestReconciler(instructionFile string) (*SkillReconciler, *AgentRunnerLoop) {
-	runnerLoop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake")
+	runnerLoop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake", "gemini", "")
 	runnerLoop.Model = &fakeModel{}
 	runnerLoop.modelReady = true
 	reconciler := &SkillReconciler{

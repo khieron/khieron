@@ -24,6 +24,10 @@ spec:
       containers:
       - args: {{- toYaml .Values.controllerManager.manager.args | nindent 8 }}
         - --model-name={{ .Values.modelName }}
+        - --model-backend={{ .Values.modelBackend }}
+        {{- if .Values.openaiBaseUrl }}
+        - --openai-base-url={{ .Values.openaiBaseUrl }}
+        {{- end }}
         command:
         - /manager
         env:
@@ -48,6 +52,12 @@ spec:
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: {{ quote .Values.controllerManager.manager.env.googleApplicationCredentials
             }}
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: OPENAI_API_KEY
+              name: {{ include "khieron.fullname" . }}-openai-api-key-secret
+              optional: true
         {{- if and .Values.otelHeadersSecret .Values.otelHeadersSecret.otelExporterOtlpHeaders }}
         - name: OTEL_EXPORTER_OTLP_HEADERS
           valueFrom:
