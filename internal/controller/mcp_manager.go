@@ -26,8 +26,8 @@ import (
 	"os/exec"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"google.golang.org/adk/tool"
-	"google.golang.org/adk/tool/mcptoolset"
+	"google.golang.org/adk/v2/tool"
+	"google.golang.org/adk/v2/tool/mcptoolset"
 )
 
 // MCPServerConfig represents one MCP server entry in mcp.json,

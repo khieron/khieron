@@ -28,13 +28,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"google.golang.org/adk/agent/llmagent"
-	"google.golang.org/adk/runner"
-	"google.golang.org/adk/session"
-	"google.golang.org/adk/tool"
-	"google.golang.org/adk/tool/functiontool"
-	"google.golang.org/adk/tool/skilltoolset"
-	"google.golang.org/adk/tool/skilltoolset/skill"
+	"google.golang.org/adk/v2/agent"
+	"google.golang.org/adk/v2/agent/llmagent"
+	"google.golang.org/adk/v2/runner"
+	"google.golang.org/adk/v2/session"
+	"google.golang.org/adk/v2/tool"
+	"google.golang.org/adk/v2/tool/functiontool"
+	"google.golang.org/adk/v2/tool/skilltoolset"
+	"google.golang.org/adk/v2/tool/skilltoolset/skill"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -73,7 +74,7 @@ func newUpdateOwnerTool(k8sClient client.Client, ownerKey types.NamespacedName) 
 	return functiontool.New(functiontool.Config{
 		Name:        "update_owner",
 		Description: "Updates the owning Skill CR's spec fields. Can set enableagent (bool) to enable/disable the agent, or intervalminute (int) to change the run interval.",
-	}, func(ctx tool.Context, args UpdateOwnerArgs) (UpdateOwnerResult, error) {
+	}, func(ctx agent.Context, args UpdateOwnerArgs) (UpdateOwnerResult, error) {
 		var owner agencyv1alpha1.Skill
 		if err := k8sClient.Get(ctx, ownerKey, &owner); err != nil {
 			return UpdateOwnerResult{}, fmt.Errorf("failed to get owner Skill: %v", err)
@@ -121,7 +122,7 @@ func newSetAdvisoryLabelsTool(k8sClient client.Client, advisoryNamespace string)
 	return functiontool.New(functiontool.Config{
 		Name:        "set_advisory_labels",
 		Description: "Labels a Advisory with the related Job's name and namespace. This allows the controller to track which Job an advisory relates to, and clean up the advisory when the Job is deleted. Requires the advisory name, and the job name and namespace.",
-	}, func(ctx tool.Context, args SetAdvisoryLabelsArgs) (SetAdvisoryLabelsResult, error) {
+	}, func(ctx agent.Context, args SetAdvisoryLabelsArgs) (SetAdvisoryLabelsResult, error) {
 		if args.AdvisoryName == "" || args.JobName == "" || args.JobNamespace == "" {
 			return SetAdvisoryLabelsResult{}, fmt.Errorf("advisory_name, job_name, and job_namespace are all required")
 		}
@@ -195,7 +196,7 @@ func newCreateAdvisoryTool(k8sClient client.Client, scheme *runtime.Scheme, owne
 	return functiontool.New(functiontool.Config{
 		Name:        "create_advisory",
 		Description: "Creates a Advisory custom resource to alert a human operator about an issue that needs attention.",
-	}, func(ctx tool.Context, args CreateAdvisoryArgs) (CreateAdvisoryResult, error) {
+	}, func(ctx agent.Context, args CreateAdvisoryArgs) (CreateAdvisoryResult, error) {
 		// Fetch the owner Skill CR for the owner reference
 		var owner agencyv1alpha1.Skill
 		if err := k8sClient.Get(ctx, ownerKey, &owner); err != nil {
@@ -269,7 +270,7 @@ func newRunScriptTool(skillDir string) (tool.Tool, error) {
 	return functiontool.New(functiontool.Config{
 		Name:        "run_script",
 		Description: "Executes a script from the skill's scripts/ directory and returns its output. Pass arguments to the script via the args array.",
-	}, func(ctx tool.Context, args RunScriptArgs) (RunScriptResult, error) {
+	}, func(ctx agent.Context, args RunScriptArgs) (RunScriptResult, error) {
 		log := logf.FromContext(ctx)
 		cleanPath := filepath.Clean(args.ScriptPath)
 		log.Info("run_script called", "requestedPath", args.ScriptPath, "cleanPath", cleanPath, "skillDir", skillDir)
