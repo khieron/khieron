@@ -388,7 +388,11 @@ func main() {
 		}
 	}
 
-	runnerLoop := controller.NewAgentRunnerLoop(mgr.GetClient(), mgr.GetScheme(), modelName, modelBackend, openaiBaseURL, llmHTTPClient)
+	runnerLoop := controller.NewAgentRunnerLoop(
+		mgr.GetClient(), mgr.GetScheme(),
+		modelName, modelBackend, openaiBaseURL,
+		llmHTTPClient,
+	)
 	if err := mgr.Add(runnerLoop); err != nil {
 		setupLog.Error(err, "unable to add agent runner loop to manager")
 		os.Exit(1)
