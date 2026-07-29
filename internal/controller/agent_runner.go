@@ -69,6 +69,7 @@ type AgentRunnerLoop struct {
 	modelName     string
 	modelBackend  string
 	openaiBaseURL string
+	httpClient    *http.Client
 	modelReady    bool
 
 	mu     sync.RWMutex
@@ -79,13 +80,16 @@ type AgentRunnerLoop struct {
 }
 
 // NewAgentRunnerLoop creates a new AgentRunnerLoop.
-func NewAgentRunnerLoop(c client.Client, scheme *runtime.Scheme, modelName, modelBackend, openaiBaseURL string) *AgentRunnerLoop {
+// httpClient is optional; when non-nil it is used for OpenAI-compatible API
+// calls (e.g. to trust an OpenShift service-serving CA).
+func NewAgentRunnerLoop(c client.Client, scheme *runtime.Scheme, modelName, modelBackend, openaiBaseURL string, httpClient *http.Client) *AgentRunnerLoop {
 	return &AgentRunnerLoop{
 		Client:        c,
 		Scheme:        scheme,
 		modelName:     modelName,
 		modelBackend:  modelBackend,
 		openaiBaseURL: openaiBaseURL,
+		httpClient:    httpClient,
 		agents:        make(map[string]*AgentEntry),
 		notify:        make(chan struct{}, 1),
 	}
@@ -475,7 +479,9 @@ func (l *AgentRunnerLoop) createModel(ctx context.Context) (model.LLM, error) {
 
 	switch l.modelBackend {
 	case "openai":
-		cfg := &openaimodel.ClientConfig{}
+		cfg := &openaimodel.ClientConfig{
+			HTTPClient: l.httpClient,
+		}
 		if l.openaiBaseURL != "" {
 			cfg.BaseURL = l.openaiBaseURL
 		}

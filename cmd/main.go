@@ -360,7 +360,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	runnerLoop := controller.NewAgentRunnerLoop(mgr.GetClient(), mgr.GetScheme(), modelName, modelBackend, openaiBaseURL)
+	// Build an HTTP client that trusts the OpenShift service-serving CA so the
+	// controller can call model endpoints on internal cluster services.
+	var llmHTTPClient *http.Client
+	const serviceCACertPath = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+	if caCert, err := os.ReadFile(serviceCACertPath); err == nil {
+		pool := x509.NewCertPool()
+		pool.AppendCertsFromPEM(caCert)
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.TLSClientConfig = &tls.Config{RootCAs: pool}
+		llmHTTPClient = &http.Client{Transport: transport}
+		setupLog.Info("Loaded service CA for LLM client", "path", serviceCACertPath)
+	}
+
+	runnerLoop := controller.NewAgentRunnerLoop(mgr.GetClient(), mgr.GetScheme(), modelName, modelBackend, openaiBaseURL, llmHTTPClient)
 	if err := mgr.Add(runnerLoop); err != nil {
 		setupLog.Error(err, "unable to add agent runner loop to manager")
 		os.Exit(1)
