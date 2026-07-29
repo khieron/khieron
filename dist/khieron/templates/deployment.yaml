@@ -101,6 +101,9 @@ spec:
           name: google-service-account-key
           readOnly: true
       nodeSelector: {{- toYaml .Values.controllerManager.nodeSelector | nindent 8 }}
+      {{- with .Values.controllerManager.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext: {{- toYaml .Values.controllerManager.podSecurityContext | nindent
         8 }}
       serviceAccountName: {{ include "khieron.serviceAccountName" . }}
