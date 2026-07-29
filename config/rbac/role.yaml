@@ -42,3 +42,10 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - serving.kserve.io
+  resources:
+  - inferenceservices
+  - llminferenceservices
+  verbs:
+  - get

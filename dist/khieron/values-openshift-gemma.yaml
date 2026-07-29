@@ -12,3 +12,11 @@ egressFirewall:
 modelName: gemma-4-31b
 modelBackend: openai
 openaiBaseUrl: "https://gemma-4-31b-predictor.ls-evals.svc.cluster.local:8443/v1"
+controllerManager:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: nvidia.com/gpu.present
+            operator: DoesNotExist

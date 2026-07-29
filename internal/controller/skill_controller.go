@@ -316,6 +316,10 @@ func newRunScriptTool(skillDir string) (tool.Tool, error) {
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 
+// RBAC for accessing KServe InferenceServices via authenticated endpoints
+// +kubebuilder:rbac:groups=serving.kserve.io,resources=inferenceservices,verbs=get
+// +kubebuilder:rbac:groups=serving.kserve.io,resources=llminferenceservices,verbs=get
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
