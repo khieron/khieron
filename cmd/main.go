@@ -360,17 +360,32 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Build an HTTP client that trusts the OpenShift service-serving CA so the
-	// controller can call model endpoints on internal cluster services.
+	// Build an HTTP client that trusts the OpenShift service-serving CA and
+	// refreshes the SA token on each request, for internal cluster services.
+	// External APIs (openai.com, googleapis.com) use OPENAI_API_KEY env var instead.
 	var llmHTTPClient *http.Client
+	const saTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	const serviceCACertPath = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
-	if caCert, err := os.ReadFile(serviceCACertPath); err == nil {
-		pool := x509.NewCertPool()
-		pool.AppendCertsFromPEM(caCert)
-		transport := http.DefaultTransport.(*http.Transport).Clone()
-		transport.TLSClientConfig = &tls.Config{RootCAs: pool}
-		llmHTTPClient = &http.Client{Transport: transport}
-		setupLog.Info("Loaded service CA for LLM client", "path", serviceCACertPath)
+
+	// Only configure the custom client for internal cluster services
+	isInternalService := strings.Contains(openaiBaseURL, ".svc.cluster.local")
+	if isInternalService {
+		if caCert, err := os.ReadFile(serviceCACertPath); err == nil {
+			pool := x509.NewCertPool()
+			pool.AppendCertsFromPEM(caCert)
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport.TLSClientConfig = &tls.Config{RootCAs: pool}
+
+			// Wrap with token refresh for authenticated internal services
+			var finalTransport http.RoundTripper = transport
+			if _, err := os.Stat(saTokenPath); err == nil {
+				finalTransport = &tokenRefreshTransport{base: transport, tokenPath: saTokenPath}
+				setupLog.Info("Configured dynamic bearer token refresh for LLM client", "path", saTokenPath)
+			}
+
+			llmHTTPClient = &http.Client{Transport: finalTransport}
+			setupLog.Info("Loaded service CA for LLM client", "path", serviceCACertPath)
+		}
 	}
 
 	runnerLoop := controller.NewAgentRunnerLoop(mgr.GetClient(), mgr.GetScheme(), modelName, modelBackend, openaiBaseURL, llmHTTPClient)
