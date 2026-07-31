@@ -51,5 +51,5 @@ hi claude - I need a recommendation for an LLM for document summarization. It sh
 This should hopefully recommend Granite 3.1 8B or Qwen.
 
 ```
-please proceed with the Granite 3.1 8B model FP8 on the nvidia A100 GPU in to the gpuaas-team-a-training namespace.
+please proceed with the RedHatAI/granite-3.1-8b-instruct on the nvidia A100 GPU in to the gpuaas-team-a-training namespace. Please don't use openvino.
 ```
