@@ -9,7 +9,11 @@ data:
   {{- range $path, $_ := .Files.Glob "skill-files/**" }}
   {{- $relPath := trimPrefix "skill-files/" $path }}
   {{ printf "%s___%s" $skillName ($relPath | replace "/" "___") }}: |
+  {{- if hasSuffix "SKILL.md" $path }}
+{{ tpl ($.Files.Get $path) $ | indent 4 }}
+  {{- else }}
 {{ $.Files.Get $path | indent 4 }}
+  {{- end }}
   {{- end }}
   {{- range $name, $content := .Values.extraFiles }}
   {{ printf "%s___%s" $skillName ($name | replace "/" "___") }}: |

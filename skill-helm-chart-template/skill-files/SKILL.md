@@ -1,5 +1,5 @@
 ---
-name: my-skill
+name: {{ include "skill.fullname" . }}
 description: Replace with a description of what this skill does.
 license: Apache-2.0
 metadata:

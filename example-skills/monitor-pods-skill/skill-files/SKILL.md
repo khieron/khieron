@@ -1,5 +1,5 @@
 ---
-name: monitor-pods-skill
+name: {{ include "skill.fullname" . }}
 description: Looks out for pods in the current namespace that are deployed but aren't running for some reason.
 license: Apache-2.0
 metadata:

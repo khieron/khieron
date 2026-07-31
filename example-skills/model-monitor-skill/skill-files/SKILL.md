@@ -1,5 +1,5 @@
 ---
-name: model-monitor-skill
+name: {{ include "skill.fullname" . }}
 description: Monitors a deployed model on Red Hat OpenShift AI, checking vLLM serving metrics and GPU health against expected performance targets, and raising advisories when issues are detected.
 license: Apache-2.0
 metadata:
