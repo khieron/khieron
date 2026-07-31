@@ -1,0 +1,22 @@
+---
+skill:
+  intervalMinute: 5
+  enableAgent: true
+serviceAccount:
+  name: khieron
+  namespace: khieron-system
+mcpConfig:
+  mcpJson: {
+    "mcpServers": {
+      "rhoai": {
+        "type": "http",
+        "url": "http://rhoai-mcp:8000/mcp"
+      }
+    }
+  }
+extraFiles: {}
+# Load deployment context into the skill at deploy time.
+# The SKILL-CONTEXT.md file should describe the deployed model, its resource
+# allocation, and expected performance targets (TTFT, ITL, E2E, QPS).
+# Add this to an override.values.yaml or use --set-file:
+#   --set-file 'extraFiles.references___SKILL-CONTEXT\.md=/tmp/SKILL-CONTEXT.md'
