@@ -6,7 +6,7 @@ on:
 
 jobs:
   lint:
-    name: Run on Ubuntu
+    name: Go Lint
     runs-on: ubuntu-latest
     steps:
       - name: Clone the code
@@ -21,3 +21,26 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.12.2
+
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint all Helm charts
+        run: |
+          exit_code=0
+          for chart_file in $(find . -name Chart.yaml -not -path '*/vendor/*'); do
+            chart_dir=$(dirname "$chart_file")
+            echo "::group::Linting ${chart_dir}"
+            if ! helm lint "${chart_dir}"; then
+              exit_code=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $exit_code
