@@ -4,7 +4,7 @@ description: Monitors a deployed model on Red Hat OpenShift AI, checking vLLM se
 license: Apache-2.0
 metadata:
   author: Khieron authors
-  version: "0.1.0"
+  version: {{ .Chart.Version | quote }}
 compatibility: Used by khieron operator. Runs on a Kubernetes cluster with RHOAI, vLLM serving, and the rhoai-mcp MCP server.
 ---
 

@@ -4,7 +4,7 @@ description: Monitors the health and performance of training jobs on Red Hat Ope
 license: Apache-2.0
 metadata:
   author: Khieron authors
-  version: "0.1.0"
+  version: {{ .Chart.Version | quote }}
 compatibility: Used by khieron operator. Runs on a Kubernetes cluster with RHOAI and the rhoai-mcp MCP server.
 ---
 
