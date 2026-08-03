@@ -6,6 +6,11 @@
 # Returns JSON array with GPU utilization, memory, and temperature per pod/GPU,
 # or an empty array if metrics are unavailable.
 
+set -e
+if [ "$DEBUG" = "1" ] || [ "$DEBUG" = "true" ]; then
+  set -x
+fi
+
 MODEL_NAME="${1:?Usage: check-gpu-metrics.sh <model-name> <namespace>}"
 NAMESPACE="${2:?Usage: check-gpu-metrics.sh <model-name> <namespace>}"
 
@@ -27,7 +32,7 @@ query_prometheus() {
         "${PROM_HOST}/api/v1/query" 2>/dev/null
 }
 
-POD_SELECTOR="namespace=\"${NAMESPACE}\",pod=~\"${MODEL_NAME}.*\""
+POD_SELECTOR="exported_namespace=\"${NAMESPACE}\",exported_pod=~\"${MODEL_NAME}.*\""
 
 GPU_UTIL=$(query_prometheus "DCGM_FI_DEV_GPU_UTIL{${POD_SELECTOR}}")
 MEM_UTIL=$(query_prometheus "DCGM_FI_DEV_MEM_COPY_UTIL{${POD_SELECTOR}}")
@@ -48,10 +53,10 @@ if [ -z "$HAS_DATA" ] || [ "$HAS_DATA" = "0" ]; then
 fi
 
 # Build lookup maps for memory, temperature, and framebuffer
-MEM_MAP=$(echo "$MEM_UTIL" | jq '[.data.result[]? | {key: (.metric.pod + "-" + .metric.gpu), value: (.value[1] | tonumber)}] | from_entries' 2>/dev/null || echo '{}')
-TEMP_MAP=$(echo "$GPU_TEMP" | jq '[.data.result[]? | {key: (.metric.pod + "-" + .metric.gpu), value: (.value[1] | tonumber)}] | from_entries' 2>/dev/null || echo '{}')
-FB_USED_MAP=$(echo "$FB_USED" | jq '[.data.result[]? | {key: (.metric.pod + "-" + .metric.gpu), value: (.value[1] | tonumber)}] | from_entries' 2>/dev/null || echo '{}')
-FB_FREE_MAP=$(echo "$FB_FREE" | jq '[.data.result[]? | {key: (.metric.pod + "-" + .metric.gpu), value: (.value[1] | tonumber)}] | from_entries' 2>/dev/null || echo '{}')
+MEM_MAP=$(echo "$MEM_UTIL" | jq '[.data.result[]? | {key: (.metric.exported_pod + "-" + .metric.gpu), value: (.value[1] | tonumber)}] | from_entries' 2>/dev/null || echo '{}')
+TEMP_MAP=$(echo "$GPU_TEMP" | jq '[.data.result[]? | {key: (.metric.exported_pod + "-" + .metric.gpu), value: (.value[1] | tonumber)}] | from_entries' 2>/dev/null || echo '{}')
+FB_USED_MAP=$(echo "$FB_USED" | jq '[.data.result[]? | {key: (.metric.exported_pod + "-" + .metric.gpu), value: (.value[1] | tonumber)}] | from_entries' 2>/dev/null || echo '{}')
+FB_FREE_MAP=$(echo "$FB_FREE" | jq '[.data.result[]? | {key: (.metric.exported_pod + "-" + .metric.gpu), value: (.value[1] | tonumber)}] | from_entries' 2>/dev/null || echo '{}')
 
 echo "$GPU_UTIL" | jq \
     --argjson mem "$MEM_MAP" \
@@ -59,11 +64,11 @@ echo "$GPU_UTIL" | jq \
     --argjson fb_used "$FB_USED_MAP" \
     --argjson fb_free "$FB_FREE_MAP" \
     '[.data.result[]? | {
-        pod: .metric.pod,
+        pod: .metric.exported_pod,
         gpu: .metric.gpu,
         gpu_utilization_pct: (.value[1] | tonumber),
-        gpu_memory_bandwidth_pct: ($mem[(.metric.pod + "-" + .metric.gpu)] // null),
-        gpu_temperature_c: ($temp[(.metric.pod + "-" + .metric.gpu)] // null),
-        gpu_fb_used_mb: ($fb_used[(.metric.pod + "-" + .metric.gpu)] // null),
-        gpu_fb_free_mb: ($fb_free[(.metric.pod + "-" + .metric.gpu)] // null)
+        gpu_memory_bandwidth_pct: ($mem[(.metric.exported_pod + "-" + .metric.gpu)] // null),
+        gpu_temperature_c: ($temp[(.metric.exported_pod + "-" + .metric.gpu)] // null),
+        gpu_fb_used_mb: ($fb_used[(.metric.exported_pod + "-" + .metric.gpu)] // null),
+        gpu_fb_free_mb: ($fb_free[(.metric.exported_pod + "-" + .metric.gpu)] // null)
     }]' 2>/dev/null || echo "[]"

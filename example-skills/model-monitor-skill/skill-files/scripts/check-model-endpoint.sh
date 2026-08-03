@@ -11,24 +11,37 @@ NAMESPACE="${2:?Usage: check-model-endpoint.sh <model-name> <namespace>}"
 TOKEN_PATH="/var/run/secrets/kubernetes.io/serviceaccount/token"
 TIMEOUT_SECS=10
 
-# Construct the internal service URL for the InferenceService
-# KServe predictor services follow the pattern: <name>-predictor.<namespace>.svc.cluster.local
-ENDPOINT="http://${MODEL_NAME}-predictor.${NAMESPACE}.svc.cluster.local/v1/models"
+# Discover the port from the predictor service via the Kubernetes API
+SVC_NAME="${MODEL_NAME}-predictor"
+K8S_API="https://kubernetes.default.svc"
+CA_CERT="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
-CURL_OPTS="-s --max-time ${TIMEOUT_SECS} -o /tmp/model-health-response.json -w %{http_code}\\n%{time_total}"
+if [ -f "$TOKEN_PATH" ]; then
+    SVC_JSON=$(curl -s --cacert "$CA_CERT" \
+        -H "Authorization: Bearer $(cat "$TOKEN_PATH")" \
+        "${K8S_API}/api/v1/namespaces/${NAMESPACE}/services/${SVC_NAME}" 2>/dev/null)
+    SVC_PORT=$(echo "$SVC_JSON" | jq -r '.spec.ports[0].port // empty' 2>/dev/null)
+fi
+
+if [ -z "$SVC_PORT" ]; then
+    SVC_PORT=8080
+fi
+
+ENDPOINT="http://${SVC_NAME}.${NAMESPACE}.svc.cluster.local:${SVC_PORT}/v1/models"
+
+CURL_ARGS=(-s --max-time "${TIMEOUT_SECS}" -o /tmp/model-health-response.json)
+WRITE_OUT='%{http_code} %{time_total}'
 
 # Add auth token if available
 if [ -f "$TOKEN_PATH" ]; then
-    TOKEN=$(cat "$TOKEN_PATH")
-    CURL_OPTS="${CURL_OPTS} -H 'Authorization: Bearer ${TOKEN}'"
+    CURL_ARGS+=(-H "Authorization: Bearer $(cat "$TOKEN_PATH")")
 fi
 
-START_TIME=$(date +%s%N 2>/dev/null || date +%s)
-HTTP_RESPONSE=$(eval curl ${CURL_OPTS} "${ENDPOINT}" 2>/dev/null)
+CURL_OUTPUT=$(curl "${CURL_ARGS[@]}" -w "$WRITE_OUT" "${ENDPOINT}" 2>/dev/null)
 CURL_EXIT=$?
 
-HTTP_CODE=$(echo "$HTTP_RESPONSE" | head -1)
-RESPONSE_TIME=$(echo "$HTTP_RESPONSE" | tail -1)
+HTTP_CODE=$(echo "$CURL_OUTPUT" | awk '{print $1}')
+RESPONSE_TIME=$(echo "$CURL_OUTPUT" | awk '{print $2}')
 
 if [ $CURL_EXIT -ne 0 ]; then
     jq -n \

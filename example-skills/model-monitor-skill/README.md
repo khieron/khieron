@@ -53,3 +53,54 @@ This should hopefully recommend Granite 3.1 8B or Qwen.
 ```
 please proceed with the RedHatAI/granite-3.1-8b-instruct on the nvidia A100 GPU in to the gpuaas-team-a-training namespace. Please don't use openvino.
 ```
+
+In this scenario the SKILL_CONTEXT.md might appear like below. The important point is that the Planner recomendations have been included so that the Skill will be able to compare them to actual metrics.
+
+```markdown
+model-monitor-granite-3-1-8b-instruct-model-monitor-skill___references___SKILL-CONTEXT.md:
+----
+# Model Deployment Context
+
+## Model Parameters
+- **Model**: RedHatAI/granite-3.1-8b-instruct
+- **Format**: pytorch
+- **Estimated Parameters**: 8.0B
+- **Estimated Size**: 26.0 GB
+- **Is LLM**: True
+- **Runtime**: kserve-ovms
+- **Storage URI**: oci://registry.redhat.io/rhelai1/modelcar-granite-3-1-8b-instruct:1.5
+
+## Resource Requirements
+- **GPUs**: 1
+- **GPU Memory**: 31 GB
+- **Memory Request**: 16Gi
+- **Memory Limit**: 32Gi
+- **CPU**: 2
+
+## Planner Recommendations
+
+### Performance / Cost / Balanced
+- **Model**: Granite 3.1 8B Instruct
+- **GPU Config**: 1x A100-80
+- **Cost**: $2,555/month
+- **TTFT (p95)**: 116ms
+- **ITL (p95)**: 21ms
+- **E2E (p95)**: 7958ms
+- **Throughput**: 3.0 qps
+- **Reasoning**: Selected Granite 3.1 8B Instruct (8B) for chatbot_conversational use case. Deploying on A100-80 GPUs. Expected performance: TTFT=116ms (p95), ITL=21ms (p95)
+```
+
+
+## Testing with Guide LLM
+
+Testing the model deployment with GuideLLM can push the deployment to its limits. This can be useful to see advisories being created.
+
+
+```bash
+guidellm run \
+  --backend kind=openai_http,target=http://localhost:8080 \
+  --tokenizer kind=huggingface_auto,model=ibm-granite/granite-3.1-8b-instruct \
+  --profile kind=sweep \
+  --constraint kind=max_duration,seconds=30 \
+  --data kind=synthetic_text,prompt_tokens=256,output_tokens=128
+```

@@ -6,6 +6,11 @@
 # Returns JSON with TTFT, ITL, E2E latency percentiles, queue depth,
 # KV cache usage, and request counts, or an error message if unavailable.
 
+set -e
+if [ "$DEBUG" = "1" ] || [ "$DEBUG" = "true" ]; then
+  set -x
+fi
+
 MODEL_NAME="${1:?Usage: check-vllm-metrics.sh <model-name> <namespace>}"
 NAMESPACE="${2:?Usage: check-vllm-metrics.sh <model-name> <namespace>}"
 
@@ -32,38 +37,37 @@ extract_value() {
     echo "$response" | jq -r '.data.result[0].value[1] // empty' 2>/dev/null
 }
 
-# Pod label selector — vLLM pods are typically named after the InferenceService
-POD_SELECTOR="pod=~\"${MODEL_NAME}.*\",namespace=\"${NAMESPACE}\""
+METRIC_SELECTOR="model_name=\"${MODEL_NAME}\",namespace=\"${NAMESPACE}\""
 
 # TTFT — time to first token (histogram, get p50/p95/p99)
-TTFT_P50=$(extract_value "$(query_prometheus "histogram_quantile(0.50, sum(rate(vllm:time_to_first_token_seconds_bucket{${POD_SELECTOR}}[5m])) by (le))")")
-TTFT_P95=$(extract_value "$(query_prometheus "histogram_quantile(0.95, sum(rate(vllm:time_to_first_token_seconds_bucket{${POD_SELECTOR}}[5m])) by (le))")")
-TTFT_P99=$(extract_value "$(query_prometheus "histogram_quantile(0.99, sum(rate(vllm:time_to_first_token_seconds_bucket{${POD_SELECTOR}}[5m])) by (le))")")
+TTFT_P50=$(extract_value "$(query_prometheus "histogram_quantile(0.50, sum(rate(vllm:time_to_first_token_seconds_bucket{${METRIC_SELECTOR}}[5m])) by (le))")")
+TTFT_P95=$(extract_value "$(query_prometheus "histogram_quantile(0.95, sum(rate(vllm:time_to_first_token_seconds_bucket{${METRIC_SELECTOR}}[5m])) by (le))")")
+TTFT_P99=$(extract_value "$(query_prometheus "histogram_quantile(0.99, sum(rate(vllm:time_to_first_token_seconds_bucket{${METRIC_SELECTOR}}[5m])) by (le))")")
 
 # ITL — inter-token latency / time per output token
-ITL_P50=$(extract_value "$(query_prometheus "histogram_quantile(0.50, sum(rate(vllm:time_per_output_token_seconds_bucket{${POD_SELECTOR}}[5m])) by (le))")")
-ITL_P95=$(extract_value "$(query_prometheus "histogram_quantile(0.95, sum(rate(vllm:time_per_output_token_seconds_bucket{${POD_SELECTOR}}[5m])) by (le))")")
+ITL_P50=$(extract_value "$(query_prometheus "histogram_quantile(0.50, sum(rate(vllm:time_per_output_token_seconds_bucket{${METRIC_SELECTOR}}[5m])) by (le))")")
+ITL_P95=$(extract_value "$(query_prometheus "histogram_quantile(0.95, sum(rate(vllm:time_per_output_token_seconds_bucket{${METRIC_SELECTOR}}[5m])) by (le))")")
 
 # E2E — end-to-end request latency
-E2E_P50=$(extract_value "$(query_prometheus "histogram_quantile(0.50, sum(rate(vllm:e2e_request_latency_seconds_bucket{${POD_SELECTOR}}[5m])) by (le))")")
-E2E_P95=$(extract_value "$(query_prometheus "histogram_quantile(0.95, sum(rate(vllm:e2e_request_latency_seconds_bucket{${POD_SELECTOR}}[5m])) by (le))")")
+E2E_P50=$(extract_value "$(query_prometheus "histogram_quantile(0.50, sum(rate(vllm:e2e_request_latency_seconds_bucket{${METRIC_SELECTOR}}[5m])) by (le))")")
+E2E_P95=$(extract_value "$(query_prometheus "histogram_quantile(0.95, sum(rate(vllm:e2e_request_latency_seconds_bucket{${METRIC_SELECTOR}}[5m])) by (le))")")
 
 # Queue depth — requests waiting and running
-REQUESTS_WAITING=$(extract_value "$(query_prometheus "sum(vllm:num_requests_waiting{${POD_SELECTOR}})")")
-REQUESTS_RUNNING=$(extract_value "$(query_prometheus "sum(vllm:num_requests_running{${POD_SELECTOR}})")")
+REQUESTS_WAITING=$(extract_value "$(query_prometheus "sum(vllm:num_requests_waiting{${METRIC_SELECTOR}})")")
+REQUESTS_RUNNING=$(extract_value "$(query_prometheus "sum(vllm:num_requests_running{${METRIC_SELECTOR}})")")
 
 # KV cache utilization
-KV_CACHE_USAGE=$(extract_value "$(query_prometheus "avg(vllm:gpu_cache_usage_perc{${POD_SELECTOR}})")")
+KV_CACHE_USAGE=$(extract_value "$(query_prometheus "avg(vllm:gpu_cache_usage_perc{${METRIC_SELECTOR}})")")
 
 # Preemptions
-PREEMPTIONS=$(extract_value "$(query_prometheus "sum(vllm:num_preemptions_total{${POD_SELECTOR}})")")
+PREEMPTIONS=$(extract_value "$(query_prometheus "sum(vllm:num_preemptions_total{${METRIC_SELECTOR}})")")
 
 # Request success/failure rates (per second over last 5 minutes)
-REQUEST_SUCCESS_RATE=$(extract_value "$(query_prometheus "sum(rate(vllm:request_success_total{${POD_SELECTOR}}[5m]))")")
-REQUEST_FAILURE_RATE=$(extract_value "$(query_prometheus "sum(rate(vllm:request_failure_total{${POD_SELECTOR}}[5m]))")")
+REQUEST_SUCCESS_RATE=$(extract_value "$(query_prometheus "sum(rate(vllm:request_success_total{${METRIC_SELECTOR}}[5m]))")")
+REQUEST_FAILURE_RATE=$(extract_value "$(query_prometheus "sum(rate(vllm:request_failure_total{${METRIC_SELECTOR}}[5m]))")")
 
 # Tokens generated per second
-TOKENS_PER_SEC=$(extract_value "$(query_prometheus "sum(rate(vllm:generation_tokens_total{${POD_SELECTOR}}[5m]))")")
+TOKENS_PER_SEC=$(extract_value "$(query_prometheus "sum(rate(vllm:generation_tokens_total{${METRIC_SELECTOR}}[5m]))")")
 
 # Build JSON output
 jq -n \
