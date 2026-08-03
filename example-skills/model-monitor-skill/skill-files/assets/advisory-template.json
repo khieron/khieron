@@ -1,0 +1,6 @@
+{
+    "name": "model-monitor-<model_name>-<issue_type>",
+    "advisory": "Model serving issue detected for <model_name> in namespace <namespace>: <issue_type>",
+    "explaination": "<explaination>",
+    "proposal": "<proposal>"
+}
