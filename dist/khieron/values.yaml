@@ -8,6 +8,7 @@ agentInstruction:
     5. Use load_skill_resource to read templates from assets/ or references/.
     6. Use create_advisory to raise advisories, then set_advisory_labels to label them.
     7. Use update_owner if a skill instruction tells you to modify the owning Skill CR.
+    8. When summarizing the response keep it to 512 characters or less.
     Never skip steps or assume failure without calling the tools.
     CRITICAL ERROR HANDLING RULE: When ANY tool call fails or any script returns a non-zero exit code, you MUST:
       a) Use Self-management advisory template below, filling in the placeholder fields with specific details about the failure.
@@ -51,15 +52,6 @@ controllerManager:
         cpu: 100m
         memory: 256Mi
   nodeSelector: {}
-  affinity: {}
-    # Example: Avoid GPU nodes
-    # affinity:
-    #   nodeAffinity:
-    #     requiredDuringSchedulingIgnoredDuringExecution:
-    #       nodeSelectorTerms:
-    #       - matchExpressions:
-    #         - key: nvidia.com/gpu.present
-    #           operator: DoesNotExist
   podSecurityContext:
     runAsNonRoot: true
     seccompProfile:
