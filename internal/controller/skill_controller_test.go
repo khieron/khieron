@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +63,7 @@ func createSkillConfigMap(ctx context.Context, name, namespace string) {
 
 // newTestReconciler creates a SkillReconciler with a fake model for testing.
 func newTestReconciler(instructionFile string) (*SkillReconciler, *AgentRunnerLoop) {
-	runnerLoop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), "fake", "gemini", "", nil)
+	runnerLoop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), record.NewFakeRecorder(10), "fake", "gemini", "", nil)
 	runnerLoop.Model = &fakeModel{}
 	runnerLoop.modelReady = true
 	reconciler := &SkillReconciler{

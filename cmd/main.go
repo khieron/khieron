@@ -390,6 +390,7 @@ func main() {
 
 	runnerLoop := controller.NewAgentRunnerLoop(
 		mgr.GetClient(), mgr.GetScheme(),
+		mgr.GetEventRecorderFor("skill-controller"),
 		modelName, modelBackend, openaiBaseURL,
 		llmHTTPClient,
 	)
