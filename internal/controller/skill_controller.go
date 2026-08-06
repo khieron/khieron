@@ -315,6 +315,7 @@ func newRunScriptTool(skillDir string) (tool.Tool, error) {
 
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // RBAC for accessing KServe InferenceServices via authenticated endpoints
 // +kubebuilder:rbac:groups=serving.kserve.io,resources=inferenceservices,verbs=get
