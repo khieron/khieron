@@ -9,7 +9,7 @@ require (
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
 	go.opentelemetry.io/otel/sdk v1.44.0
-	google.golang.org/adk/v2 v2.1.0
+	google.golang.org/adk/v2 v2.3.0
 	google.golang.org/genai v1.63.0
 	k8s.io/api v0.33.0
 	k8s.io/apimachinery v0.33.0
