@@ -30,10 +30,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/recorder"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"google.golang.org/adk/v2/agent"
@@ -65,7 +65,7 @@ type AgentEntry struct {
 type AgentRunnerLoop struct {
 	client.Client
 	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Recorder recorder.EventRecorder
 
 	Model         model.LLM
 	modelName     string
@@ -84,11 +84,11 @@ type AgentRunnerLoop struct {
 // NewAgentRunnerLoop creates a new AgentRunnerLoop.
 // httpClient is optional; when non-nil it is used for OpenAI-compatible API
 // calls (e.g. to trust an OpenShift service-serving CA).
-func NewAgentRunnerLoop(c client.Client, scheme *runtime.Scheme, recorder record.EventRecorder, modelName, modelBackend, openaiBaseURL string, httpClient *http.Client) *AgentRunnerLoop {
+func NewAgentRunnerLoop(c client.Client, scheme *runtime.Scheme, rec recorder.EventRecorder, modelName, modelBackend, openaiBaseURL string, httpClient *http.Client) *AgentRunnerLoop {
 	return &AgentRunnerLoop{
 		Client:        c,
 		Scheme:        scheme,
-		Recorder:      recorder,
+		Recorder:      rec,
 		modelName:     modelName,
 		modelBackend:  modelBackend,
 		openaiBaseURL: openaiBaseURL,
@@ -355,7 +355,7 @@ func (l *AgentRunnerLoop) runSkillAgentIfDue(ctx context.Context, entry *AgentEn
 		"toolUseTokens", result.Tokens.ToolUsePromptTokenCount,
 		"totalTokens", result.Tokens.TotalTokenCount)
 
-	l.Recorder.Event(&skill, "Normal", "AgentCompleted", truncateEventMessage(result.ResponseText))
+	l.Recorder.Eventf(&skill, nil, "Normal", "AgentCompleted", "AgentCompleted", truncateEventMessage(result.ResponseText))
 
 	if err := l.Get(ctx, entry.CRKey, &skill); err != nil {
 		return fmt.Errorf("failed to re-fetch CR for status update: %v", err)

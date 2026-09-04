@@ -26,7 +26,6 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/adk/v2/tool/mcptoolset"
-	"k8s.io/client-go/tools/record"
 )
 
 const testBadServerName = "bad"
@@ -247,7 +246,7 @@ var _ = Describe("MCP Manager", func() {
 	Describe("AgentEntry MCP lifecycle", func() {
 		It("should call MCPCleanup when deregistering an agent", func() {
 			cleanupCalled := false
-			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), record.NewFakeRecorder(10), "fake", "gemini", "", nil)
+			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), nil, "fake", "gemini", "", nil)
 
 			loop.Register("test/skill", &AgentEntry{
 				MCPCleanup: func() { cleanupCalled = true },
@@ -258,7 +257,7 @@ var _ = Describe("MCP Manager", func() {
 
 		It("should call MCPCleanup when replacing an agent", func() {
 			oldCleanupCalled := false
-			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), record.NewFakeRecorder(10), "fake", "gemini", "", nil)
+			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), nil, "fake", "gemini", "", nil)
 
 			loop.Register("test/skill", &AgentEntry{
 				MCPCleanup: func() { oldCleanupCalled = true },
@@ -271,7 +270,7 @@ var _ = Describe("MCP Manager", func() {
 		})
 
 		It("should return MCP ConfigMap RV when set", func() {
-			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), record.NewFakeRecorder(10), "fake", "gemini", "", nil)
+			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), nil, "fake", "gemini", "", nil)
 
 			loop.Register("test/skill", &AgentEntry{
 				MCPConfigMapRV: "v42",
@@ -282,7 +281,7 @@ var _ = Describe("MCP Manager", func() {
 		})
 
 		It("should return empty MCP ConfigMap RV when not set", func() {
-			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), record.NewFakeRecorder(10), "fake", "gemini", "", nil)
+			loop := NewAgentRunnerLoop(k8sClient, k8sClient.Scheme(), nil, "fake", "gemini", "", nil)
 
 			_, exists := loop.GetMCPConfigMapRV("nonexistent/skill")
 			Expect(exists).To(BeFalse())

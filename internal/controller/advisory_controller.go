@@ -23,9 +23,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/recorder"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	agencyv1alpha1 "github.com/khieron/khieron/api/v1alpha1"
@@ -35,7 +35,7 @@ import (
 type AdvisoryReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
-	Recorder   record.EventRecorder
+	Recorder   recorder.EventRecorder
 	RunnerLoop *AgentRunnerLoop
 }
 
@@ -71,7 +71,7 @@ func (r *AdvisoryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 
 		log.Info("Advisory approved", "name", advisory.Name, "approver", advisory.Spec.Approver)
-		r.Recorder.Eventf(&advisory, "Normal", "Approved",
+		r.Recorder.Eventf(&advisory, nil, "Normal", "Approved", "Approved",
 			"Advisory approved by %s", advisory.Spec.Approver)
 
 		// If there's a proposal, find the owner Skill and run the agent to execute it
@@ -87,11 +87,11 @@ func (r *AdvisoryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				)
 				if err := r.RunnerLoop.RunWithPrompt(ctx, *ownerKey, prompt); err != nil {
 					log.Info("Failed to execute proposal", "name", advisory.Name, "error", err.Error())
-					r.Recorder.Eventf(&advisory, "Warning", "ProposalFailed",
+					r.Recorder.Eventf(&advisory, nil, "Warning", "ProposalFailed", "ProposalFailed",
 						"Failed to execute proposal: %s", err.Error())
 				} else {
 					log.Info("Proposal executed", "name", advisory.Name, "proposal", advisory.Status.Proposal)
-					r.Recorder.Eventf(&advisory, "Normal", "ProposalExecuted",
+					r.Recorder.Eventf(&advisory, nil, "Normal", "ProposalExecuted", "ProposalExecuted",
 						"Proposal executed: %s", advisory.Status.Proposal)
 				}
 			} else {
