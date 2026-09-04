@@ -96,7 +96,3 @@ type SkillList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Skill `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Skill{}, &SkillList{})
-}
