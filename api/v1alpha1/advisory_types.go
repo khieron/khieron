@@ -55,7 +55,3 @@ type AdvisoryList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Advisory `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Advisory{}, &AdvisoryList{})
-}
